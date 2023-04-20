@@ -17,14 +17,13 @@ let s:timer_id = v:null
 
 let s:session = {}
 let s:id_to_session_name = {}
-fun! Termination()
+fun! gpt#terminate()
     for id in keys(s:id_to_session_name)
         call timer_stop(str2nr(id))
     endfor
 endfun
 
-fun! GptAssistNG(...) range
-
+fun! gpt#assist(...) range
     " Prepare func args
     let l:session = "default"
     let l:selection = v:null
@@ -98,7 +97,7 @@ fun! GptAssistNG(...) range
 
     " Show the buffer if it is not displayed
     if bufwinnr(bnr) == -1
-        call SplitWindow(bnr)
+        call s:split_win(bnr)
         call setwinvar(0, "&wrap", v:true)
     endif
 
@@ -107,12 +106,12 @@ fun! GptAssistNG(...) range
         call appendbufline(bnr, '$', [line])
     endfor
 
-    let l:id = timer_start(10, "GptUpdateNGFromVim", {'repeat': -1})
+    let l:id = timer_start(10, "gpt#update", {'repeat': -1})
     let s:session[l:session]["id"] = id
     let s:id_to_session_name[id] = l:session
 endfun
 
-fun! GptUpdateNGFromVim(id)
+fun! gpt#update(id)
     call timer_pause(a:id, 1)
 
     let l:session = s:id_to_session_name[a:id]
@@ -169,7 +168,7 @@ fun! GptUpdateNGFromVim(id)
     call timer_pause(a:id, 0)
 endfun
 
-function! SplitWindow(bnr)
+function! s:split_win(bnr)
   if winwidth(0) > winheight(0) * 2
     execute "vsplit" bufname(a:bnr)
   else
@@ -177,13 +176,13 @@ function! SplitWindow(bnr)
   endif
 endfunction
 
-fun! SaveConversation()
+fun! gpt#save()
     let bname = bufname('%')
     let l:session = substitute(bname, "GPT Log - ", "", "")
     python3 gpt.SaveConversation(vim.eval("l:session"))
 endfun
 
-fun! ResetAssist()
+fun! gpt#reset()
     let bname = bufname('%')
     let l:session = substitute(bname, "GPT Log - ", "", "")
     python3 gpt.assistant = None
@@ -207,23 +206,16 @@ function! gpt#visual_selection() abort
 endfunction
 
 
-fun! VisGptAssistNG(...) range
+fun! gpt#visual_assist(...) range
     let l:selection = gpt#visual_selection()
     let l:session = "default"
     if a:0 > 0
         let l:session = a:1
     end
 
-    call GptAssistNG(session, l:selection)
+    call gpt#assist(session, l:selection)
 endfun
 
 func! s:create_session(session)
     :py3 GptCreateSession()
 endf
-
-
-command! GptAssist python3 GptAssist()
-command! -range=% GptAssist <line1>,<line2>call GptAssistNG(<f-args>)
-command! -range=% VisGptAssistNG <line1>,<line2>call VisGptAssistNG(<f-args>)
-command! -nargs=1 GptCreateSession call s:create_session(<f-args>)
-command! -nargs=1 GptInsertLast call s:insert_last(<f-args>)
