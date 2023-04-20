@@ -1,42 +1,42 @@
 
 fun! gpt#utils#build_header(username)
-    let user = a:username . ":"
-    let txt  = user . "\n"
-    let txt  = txt . repeat("=", len(user)) . "\n\n"
-    return txt
+  let user = a:username . ":"
+  let txt  = user . "\n"
+  let txt  = txt . repeat("=", len(user)) . "\n\n"
+  return txt
 endfun
 
 fun! gpt#utils#get_session_id()
-    if bufexists(gpt#utils#bufname())
-        let lognr = gpt#utils#bufnr()
-        let fl=getbufline(lognr, 2)[0]
+  if bufexists(gpt#utils#bufname())
+    let lognr = gpt#utils#bufnr()
+    let fl=getbufline(lognr, 2)[0]
 
-        if fl[0:len("SESSION")-1] == "SESSION"
-            let sp = split(fl)
-            return sp[1]
-        end
+    if fl[0:len("SESSION")-1] == "SESSION"
+      let sp = split(fl)
+      return sp[1]
     end
-    return "default"
+  end
+  return "default"
 endfun
 
 function! gpt#utils#split_win(...)
   if a:0 > 0
-      let l:bnr = a:1
+    let l:bnr = a:1
   end
   if winwidth(0) > winheight(0) * 2
-      execute "vsplit" bufname(l:bnr)
+    execute "vsplit" bufname(l:bnr)
   else
-      execute "split" bufname(l:bnr)
+    execute "split" bufname(l:bnr)
   endif
 endfunction
 
 
 function! gpt#utils#bufnr() abort
-    return bufnr("GPT Log")
+  return bufnr("GPT Log")
 endfunction
 
 function! gpt#utils#bufname() abort
-    return "GPT Log"
+  return "GPT Log"
 endfunction
 
 function! gpt#utils#visual_selection() abort
