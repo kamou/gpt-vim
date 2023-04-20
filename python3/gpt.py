@@ -10,7 +10,7 @@ class Response(object):
         self.resp = resp
 
 class Session(object):
-    def __init__(self, memory: int = 1, context: str | None = None, model: str ="gpt-3.5-turbo"):
+    def __init__(self, memory = 1, context = None, model ="gpt-3.5-turbo"):
         self.memory = memory
         self.history = list()
         self.model = model
