@@ -175,7 +175,7 @@ def replace_conversation(id, path):
         FOREIGN KEY (my_table_id) REFERENCES my_table(id)
     );
     '''
-    messages = assistant.session.history
+    messages = assistant.history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
