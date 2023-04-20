@@ -1,4 +1,5 @@
 
+import vim
 import openai
 openai.api_key = vim.g.gpt_api_key
 
