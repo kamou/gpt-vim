@@ -196,6 +196,25 @@ function! s:split_win(...)
   endif
 endfunction
 
+fun! gpt#show_summary_list()
+    let bnr = bufadd("GPT Conversations")
+    execute "vsplit" bufname(bnr)
+    call setbufvar('$', "&number", v:false)
+    call setbufvar('$', "&relativenumber", v:false)
+    call setbufvar('$', "&buftype", "nofile")
+    call setbufvar('$', "&filetype", "gpt-list")
+    call setbufvar('$', "&syntax", "markdown")
+    :vertical resize 40
+endfun
+
+fun! gpt#update_summary_list()
+    let bnr = bufadd("GPT Conversations")
+    call setbufvar(bnr, "&buftype", "nofile")
+    call bufload(bnr)
+    let summaries = pyeval("gpt.get_summary_list(vim.eval(\"s:plugin_dir\"))")
+    call setbufline(bnr, 1, summaries)
+endfun
+
 fun! gpt#save()
     let l:session = gpt#get_session_id()
     if l:session == "default"
@@ -203,12 +222,12 @@ fun! gpt#save()
     else
         python3 gpt.replace_conversation(vim.eval("l:session"), vim.eval("s:plugin_dir"))
     end
+    call gpt#update_summary_list()
 endfun
 
 fun! gpt#reset()
     let bname = bufname('%')
     let l:session = gpt#get_session_id()
-    " python3 gpt.assistant = None
     python3 gpt.assistant.reset()
     let bnr = bufnr(bname)
     call deletebufline(bnr, 1, '$')
@@ -234,18 +253,8 @@ fun! gpt#visual_assist(...) range
 endfun
 
 fun! gpt#list()
-    let bnr = bufadd("GPT Conversations")
-    call setbufvar(bnr, "&buftype", "nofile")
-    call bufload(bnr)
-    let summaries = pyeval("gpt.get_summary_list(vim.eval(\"s:plugin_dir\"))")
-    call setbufline(bnr, 1, summaries)
-    execute "vsplit" bufname(bnr)
-    call setbufvar('$', "&number", v:false)
-    call setbufvar('$', "&relativenumber", v:false)
-    call setbufvar('$', "&buftype", "nofile")
-    call setbufvar('$', "&filetype", "gpt-list")
-    call setbufvar('$', "&syntax", "markdown")
-    :vertical resize 40
+    call gpt#update_summary_list()
+    call gpt#show_summary_list()
 endfun
 
 fun! gpt#select_list()
