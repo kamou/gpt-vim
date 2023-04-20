@@ -44,4 +44,4 @@ vnoremap <silent> <leader><space> :'<,'>call gpt#visual_assist()<cr>
 ## GPT buffer keys
   - `r` reset current session memory, GPT will forget everything, the buffer will be cleared
   - `q` close gpt buffer. Memory is kept untouched, gpt will recall previous (most recent) messages.
-  - `s` save the current session history in <sessiontname>_conv.json
+  - `s` save the current session history in \<sessiontname\>_conv.json
