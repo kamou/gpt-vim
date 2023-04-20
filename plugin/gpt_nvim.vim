@@ -3,7 +3,10 @@ if !has('python3')
     finish
 endif
 
-lua require "func_span"
+lua require "utils.func_span"
+function! GetFunctionSpan()
+  return luaeval('get_function_span()')
+endfunction
 
 python3 import gpt_nvim.gpt
 python3 GptAssist = gpt_nvim.gpt.GptAssist
