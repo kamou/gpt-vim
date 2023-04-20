@@ -14,8 +14,48 @@ def extractcode(span):
     start_col = span["start"][1]
     end_row = span["end"][0]
     end_col = span["end"][1]
+    # TODO: use start and end col
 
     return vim.current.buffer[start_row-1:end_row+1]
+
+def disp(text, lang=None):
+    if lang == None:
+        lang = vim.api.buf_get_option(vim.api.get_current_buf().number, 'filetype')
+
+    ui = vim.api.list_uis()[0]
+    maxw = ui['width'] / 2
+
+    height = len(text)
+    width = 0
+    for line in text:
+      if len(line) > width:
+        width = len(line)
+
+
+
+    gpt_buf = vim.api.create_buf(False, True)
+    gpt_buf.options["filetype"] = lang
+    # vim.api.buf_set_text(gpt_buf, current_row, start_col, current_row, end_col, [line])
+    vim.api.buf_set_text(gpt_buf, 0, 0, 0, 0, text)
+
+
+    if width > ui['width'] / 2:
+      width = ui['width'] / 2
+
+    if height > ui['height'] / 2:
+      height = ui['height'] / 2
+
+    opts = {
+      'relative': 'editor',
+      'width': int(width),
+      'height': int(height),
+      'col': (ui['width']/2) - (width/2),
+      'row': (ui['height']/2) - (height/2),
+      'anchor': 'NW',
+      'style': 'minimal',
+      # 'wrap': True,
+    }
+    vim.api.open_win(gpt_buf.number, 1, opts)
 
 def _GptAssist():
     openai.api_key = vim.eval("g:gpt_api_key")
@@ -70,109 +110,22 @@ def _GptImprove():
             },
         ]
     )
-      # messages=[
-      #     {
-      #         'role': 'system',
-      #         'content' : """
-      #         You are a code improvement tool.
-      #         The user will provie you with a function, and you will improve it for size, readability, safety, and if applicable for performance, try to make use of standard apis when possible.
-      #         First, describe what the code does.
-      #         Then, provide the different steps of improvement.
-      #         Only provide compilable answers, all reasoning and explanations should be commented out. Never provide non code text outside of comments.
-      #         Always provide the improved version of the code after the code explanation and improvement reasoning.
-      #         """
-      #     },
-      #     {
-      #         'role': 'user',
-      #         'content' : str(func_code)
-      #     },
-      #     {
-      #         'role': 'assistant',
-      #         'content' : "// First, let's think step by step."
-      #     }
-      # ]
-
-
     return (response["choices"][0]["message"]["content"].split("\n"))
 
 def GptAssist():
-    lang = vim.api.buf_get_option(vim.api.get_current_buf().number, 'filetype')
     text = _GptAssist()
     if not text:
       return ""
 
-    ui = vim.api.list_uis()[0]
-    maxw = ui['width'] / 2
+    disp(text)
 
-    height = len(text)
-    width = 0
-    for line in text:
-      if len(line) > width:
-        width = len(line)
-
-
-
-    gpt_buf = vim.api.create_buf(False, True)
-    gpt_buf.options["filetype"] = lang
-    # vim.api.buf_set_text(gpt_buf, current_row, start_col, current_row, end_col, [line])
-    vim.api.buf_set_text(gpt_buf, 0, 0, 0, 0, text)
-
-
-    if width > ui['width'] / 2:
-      width = ui['width'] / 2
-
-    if height > ui['height'] / 2:
-      height = ui['height'] / 2
-
-    opts = {
-      'relative': 'editor',
-      'width': int(width),
-      'height': int(height),
-      'col': (ui['width']/2) - (width/2),
-      'row': (ui['height']/2) - (height/2),
-      'anchor': 'NW',
-      'style': 'minimal',
-      # 'wrap': True,
-    }
-    vim.api.open_win(gpt_buf.number, 1, opts)
 def GptImprove():
     lang = vim.api.buf_get_option(vim.api.get_current_buf().number, 'filetype')
     text = _GptImprove()
+    if not text:
+      return ""
 
-    ui = vim.api.list_uis()[0]
-    maxw = ui['width'] / 2
-
-    height = len(text)
-    width = 0
-    for line in text:
-      if len(line) > width:
-        width = len(line)
-
-
-
-    gpt_buf = vim.api.create_buf(False, True)
-    gpt_buf.options["filetype"] = lang
-    # vim.api.buf_set_text(gpt_buf, current_row, start_col, current_row, end_col, [line])
-    vim.api.buf_set_text(gpt_buf, 0, 0, 0, 0, text)
-
-
-    if width > ui['width'] / 2:
-      width = ui['width'] / 2
-
-    if height > ui['height'] / 2:
-      height = ui['height'] / 2
-
-    opts = {
-      'relative': 'editor',
-      'width': int(width),
-      'height': int(height),
-      'col': (ui['width']/2) - (width/2),
-      'row': (ui['height']/2) - (height/2),
-      'anchor': 'NW',
-      'style': 'minimal',
-      # 'wrap': True,
-    }
-    vim.api.open_win(gpt_buf.number, 1, opts)
+    disp(text)
 
 def GptImproveInline(text):
   pass
@@ -206,37 +159,7 @@ def GptExplain():
 
     retval = (response["choices"][0]["message"]["content"].split("\n"))
 
-    height = len(retval)
-    width = 0
-    for line in retval:
-      if len(line) > width:
-        width = len(line)
-
-
-
-    gpt_buf = vim.api.create_buf(False, True)
-    gpt_buf.options["filetype"] = "cpp"
-    # vim.api.buf_set_text(gpt_buf, current_row, start_col, current_row, end_col, [line])
-    vim.api.buf_set_text(gpt_buf, 0, 0, 0, 0, retval)
-
-
-    if width > ui['width'] / 2:
-      width = ui['width'] / 2
-
-    if height > ui['height'] / 2:
-      height = ui['height'] / 2
-
-    opts = {
-      'relative': 'editor',
-      'width': int(width),
-      'height': int(height),
-      'col': (ui['width']/2) - (width/2),
-      'row': (ui['height']/2) - (height/2),
-      'anchor': 'NW',
-      'style': 'minimal',
-      # 'wrap': True,
-    }
-    vim.api.open_win(gpt_buf.number, 1, opts)
+    disp(retval, "markdown")
 
 # vim.api.create_user_command("GptAssist", ":py3 GptAssist()", {})
 # vim.api.create_user_command("GptImprove", ":py3 GptImprove()", {})
