@@ -29,11 +29,9 @@ fun! gpt#get_session_id()
 
         let lognr = bufnr("GPT Log")
         let fl=getbufline(lognr, 2)[0]
-        echo "line2:" . fl
 
         if fl[0:len("SESSION")-1] == "SESSION"
             let sp = split(fl)
-            echo sp
             return sp[1]
         end
     end
@@ -80,7 +78,6 @@ fun! gpt#popup(...) range
     let bnr = bufnr("GPT Log")
     let tabpage_buffers = tabpagebuflist()
     if index(tabpage_buffers, bnr) == -1
-        echomsg 'split loading'
         call s:split_win(bnr)
         call setbufvar(bnr, "&cursorline", v:false)
         call setbufvar(bnr, "&cursorcolumn", v:false)
