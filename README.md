@@ -15,7 +15,7 @@ The purpose of this pugin is to assist you for your various development tasks.
 
 ## Requirements
 
- - an openai [api key](https://platform.openai.com/account/api-keys)
+ - an openai [api key](https://platform.openai.com/account/api-keys) (add `g:gpt_api_key` to your config)
  - openai and tiktoken python package
  ```sh
  pip install openai
