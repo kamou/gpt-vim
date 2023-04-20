@@ -171,8 +171,11 @@ fun! gpt#save()
 endfun
 
 fun! gpt#list()
-    call gpt#sessions#update_list()
-    call gpt#sessions#list()
+    if gpt#sessions#update_list()
+        call gpt#sessions#list()
+    else
+        echomsg "No sessions to display"
+    end
 endfun
 
 fun! gpt#reset()

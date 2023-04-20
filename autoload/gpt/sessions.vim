@@ -16,6 +16,7 @@ fun! gpt#sessions#update_list()
     call bufload(bnr)
     let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
     call setbufline(bnr, 1, summaries)
+    return !empty(summaries)
 endfun
 
 fun! gpt#sessions#save_conversation(id)
