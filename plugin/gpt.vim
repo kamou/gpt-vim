@@ -6,3 +6,5 @@ endif
 call mkdir(g:gpt#plugin_dir, 'p')
 
 python3 import gpt
+
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

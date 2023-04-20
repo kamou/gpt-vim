@@ -48,3 +48,5 @@ function! gpt#utils#visual_selection() abort
     let @a = a_save
   endtry
 endfunction
+
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

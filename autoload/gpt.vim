@@ -187,3 +187,4 @@ fun! gpt#reset()
   endfor
 endfun
 
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

@@ -58,3 +58,5 @@ fun! gpt#sessions#select_list()
   :q
   call gpt#popup()
 endfun
+
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

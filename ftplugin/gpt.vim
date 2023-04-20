@@ -18,3 +18,5 @@ nnoremap <silent> <buffer> r :call gpt#reset()<CR>
 nnoremap <silent> <buffer> s :call gpt#save()<CR>
 nnoremap <silent> <buffer> L :call gpt#list()<CR>
 setlocal syntax=markdown
+
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
