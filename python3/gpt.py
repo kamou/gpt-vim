@@ -92,10 +92,16 @@ def OpenOptions():
 
 def get_summary_list(path):
     database_name = os.path.join(path,'history.db')
-    # Define the database name and table names
     table_name = 'conversations'
     connection = sqlite3.connect(database_name)
     cursor = connection.cursor()
+
+    # Check if the conversations table exists
+    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
+    result = cursor.fetchone()
+    if result is None:
+        return []
+
     select_query = f"SELECT summary FROM {table_name};"
     cursor.execute(select_query)
     results = cursor.fetchall()
@@ -103,7 +109,6 @@ def get_summary_list(path):
     # Extract the summary values from the results
     summaries = [result[0] for result in results]
 
-    # Close the database connection
     connection.close()
     summaries = [ f" [{i + 1}] {summary}" for i, summary in enumerate(summaries) ]
     summaries.reverse()
