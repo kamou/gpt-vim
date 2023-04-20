@@ -6,6 +6,9 @@ augroup gpt_syntax
     autocmd!
     autocmd OptionSet * if &filetype == 'gpt' | set filetype=markdown | endif
     autocmd VimLeave *  call gpt#terminate()
+    autocmd VimEnter    * set nocursorline nocursorcolumn
+    autocmd BufWinEnter * set nocursorline nocursorcolumn
+    autocmd WinEnter    * set nocursorline nocursorcolumn
 augroup END
 
 " Define new key mappings
