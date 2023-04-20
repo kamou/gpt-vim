@@ -2,13 +2,12 @@
 runtime! ftplugin/markdown.vim
 
 set scrolloff=999
-augroup gpt_syntax
+augroup gpt
     autocmd!
-    autocmd OptionSet * if &filetype == 'gpt' | set filetype=markdown | endif
+    " autocmd OptionSet * if &filetype == 'gpt' | set syntax=markdown | endif
+    autocmd BufEnter * if bufname('%') == 'GPT Log' | set nocursorcolumn nocursorline | endif
+    autocmd BufEnter * if bufname('%') == 'GPT Log' | set wrap | endif
     autocmd VimLeave *  call gpt#terminate()
-    autocmd VimEnter    * set nocursorline nocursorcolumn
-    autocmd BufWinEnter * set nocursorline nocursorcolumn
-    autocmd WinEnter    * set nocursorline nocursorcolumn
 augroup END
 
 " Define new key mappings
@@ -17,4 +16,5 @@ nnoremap <silent> <buffer> o :py3 gpt_nvim.gpt.OpenOptions()<CR>
 nnoremap <silent> <buffer> q :q<CR>
 nnoremap <silent> <buffer> r :call gpt#reset()<CR>
 nnoremap <silent> <buffer> s :call gpt#save()<CR>
+nnoremap <silent> <buffer> L :call gpt#list()<CR>
 setlocal syntax=markdown

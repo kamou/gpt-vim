@@ -1,15 +1,13 @@
+import os
 import vim
 import openai
 import json
 import tiktoken
 from contextlib import contextmanager
+import sqlite3
 openai.api_key = vim.eval("g:gpt_api_key")
 
-class Response(object):
-    def __init__(self, resp):
-        self.resp = resp
-
-class Session(object):
+class Assistant(object):
     def __init__(self, memory = 1, context = None, model ="gpt-3.5-turbo"):
         self.memory = memory
         self.history = list()
@@ -32,8 +30,7 @@ class Session(object):
         return (max_tokens - tokens)
 
 
-    def send(self, n=1, max_tokens=4096, stream=False, **kwargs):
-
+    def send(self, n=1, max_tokens=4096, stream=False, temperature=0.7, **kwargs):
         if kwargs:
             self.history.append(kwargs)
 
@@ -49,29 +46,9 @@ class Session(object):
             messages=messages,
             n=n,
             stream=stream,
-            temperature=0.7,
+            temperature=temperature,
             max_tokens=int((remaining_tokens)/n)
         )
-
-
-    def update(self, message):
-        self.history.append(message)
-
-class AssistantManager(object):
-    def __init__(self):
-        self.assistants = dict()
-
-    def create_session(self, id: str, **kwargs):
-        if id not in self.assistants:
-            self.assistants[id] = Session(**kwargs)
-        return self.assistants[id]
-
-class Assistant(object):
-    def __init__(self, session=None, **kwargs):
-        self.session = session if session else Session(**kwargs)
-
-    def send(self, **kwargs):
-        return self.session.send(**kwargs)
 
     def user_say(self, message: str, **kwargs):
         return self.send(role = "user", content=message, **kwargs)
@@ -81,16 +58,19 @@ class Assistant(object):
 
     # mainly used to store Assistant answers
     def update(self, message: dict):
-        self.session.update(message)
+        self.history.append(message)
 
-AM = AssistantManager()
+    def reset(self):
+        self.history = []
 
 
-def GptCreateSession():
-    session = vim.eval("l:session")
+def GptInitSession():
+    global assistant
     context = vim.eval("l:context")
-    AM.create_session(session, memory=0, context=context)
-    return Assistant(AM.assistants[session])
+    if assistant == None:
+        assistant =  Assistant(memory=0, context=context)
+    else:
+        assistant.context = context
 
 def create_options():
     options = [
@@ -110,9 +90,156 @@ def create_options():
 def OpenOptions():
     create_options()
 
-def SaveConversation(session):
-    with open(f'{session}_conv.json', 'w') as f:
-        json.dump(AM.assistants[session].history, f)
+def get_summary_list(path):
+    database_name = os.path.join(path,'history.db')
+    # Define the database name and table names
+    table_name = 'conversations'
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+    select_query = f"SELECT summary FROM {table_name};"
+    cursor.execute(select_query)
+    results = cursor.fetchall()
+
+    # Extract the summary values from the results
+    summaries = [result[0] for result in results]
+
+    # Close the database connection
+    connection.close()
+    summaries = [ f" [{i + 1}] {summary}" for i, summary in enumerate(summaries) ]
+    summaries.reverse()
+    return summaries
+
+def get_conversation_id_from_summary(line):
+    id, _ = line.strip().split(" ", maxsplit=1)
+    id = int(id[1:-1])
+    return id
+
+def set_conversation(path, session, line):
+    global assistant
+    conv = get_conversation(path, line)
+    conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
+    assistant.history = conv
+
+def gen_summary(history):
+    assist = Assistant(context="in no more than five words, describe the topic of the following conversation")
+
+    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in history ]
+
+    messages = "==========".join(messages)
+    response = assist.user_say(messages + "\n\ndescribe the main topic of this conversation in 5 words")
+    return response["choices"][0]["message"]["content"]
+
+
+def get_conversation(path, line):
+    id = get_conversation_id_from_summary(line)
+
+    # Define the database name and table names
+    database_name = os.path.join(path, 'history.db')
+    messages_table_name = 'messages'
+
+    # Connect to the database and execute the query
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+    select_query = f"SELECT id, role, content FROM {messages_table_name} WHERE my_table_id = ?;"
+    cursor.execute(select_query, (id,))
+    results = cursor.fetchall()
+
+    # Create a list of messages from the results
+    messages = [{'id': result[0], 'role': result[1], 'content': result[2]} for result in results]
+
+    # Close the database connection
+    connection.close()
+
+    return messages
+
+def replace_conversation(id, path):
+    id = int(id)
+
+    # Define the database name and table names
+    database_name = os.path.join(path,'history.db')
+    table_name = 'conversations'
+    messages_table_name = 'messages'
+
+    # Define the schema for the tables
+    schema = '''
+    CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        summary TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        my_table_id INTEGER,
+        role TEXT,
+        content TEXT,
+        FOREIGN KEY (my_table_id) REFERENCES my_table(id)
+    );
+    '''
+    messages = assistant.session.history
+
+    # Connect to the database and create the tables
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+    cursor.executescript(schema)
+    connection.commit()
+
+    # Remove all messages for the conversation
+    cursor.execute(f"DELETE FROM {messages_table_name} WHERE my_table_id=?", (id,))
+    connection.commit()
+
+    # Insert the new messages
+    for message in messages:
+        role = message['role']
+        content = message['content']
+        insert_query = f"INSERT INTO {messages_table_name} (my_table_id, role, content) VALUES (?, ?, ?);"
+        cursor.execute(insert_query, (id, role, content))
+        connection.commit()
+
+    # Close the database connection
+    connection.close()
+
+def save_conversation(session, path):
+    database_name = os.path.join(path,'history.db')
+    # Define the database name and table names
+    table_name = 'conversations'
+    messages_table_name = 'messages'
+
+    # Define the schema for the tables
+    schema = '''
+    CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        summary TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        my_table_id INTEGER,
+        role TEXT,
+        content TEXT,
+        FOREIGN KEY (my_table_id) REFERENCES my_table(id)
+    );
+    '''
+    summary = gen_summary(assistant.history)
+    messages = assistant.history
+
+    # Connect to the database and create the tables
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+    cursor.executescript(schema)
+    connection.commit()
+
+    insert_query = f"INSERT INTO {table_name} (summary) VALUES (?);"
+    cursor.execute(insert_query, (summary,))
+    connection.commit()
+    my_table_id = cursor.lastrowid
+    for message in messages:
+        role = message['role']
+        content = message['content']
+        insert_query = f"INSERT INTO {messages_table_name} (my_table_id, role, content) VALUES (?, ?, ?);"
+        cursor.execute(insert_query, (my_table_id, role, content))
+        connection.commit()
+
+    connection.close()
 
 
 assistant = None
