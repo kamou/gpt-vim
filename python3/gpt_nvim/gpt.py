@@ -1,7 +1,7 @@
 
 import vim
 import openai
-openai.api_key = vim.g.gpt_api_key
+openai.api_key = vim.eval("g:gpt_api_key")
 
 def get_function_span():
     try:
@@ -18,7 +18,7 @@ def extractcode(span):
     return vim.current.buffer[start_row-1:end_row+1]
 
 def _GptAssist():
-    openai.api_key = vim.g.gpt_api_key
+    openai.api_key = vim.eval("g:gpt_api_key")
     func_code = extractcode(get_function_span())
     if not func_code:
       return ""
