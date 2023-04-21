@@ -93,7 +93,7 @@ fun! gpt#visual_assist(...) range
 endfun
 
 fun! s:timer_cb(id)
-  let lognr = gpt#utils#bufnr()
+  let gptbufnr = gpt#utils#bufnr()
   call timer_pause(a:id, 1)
 
   let choice = py3eval("next(gpt.last_response)['choices'][0]")
@@ -106,22 +106,23 @@ fun! s:timer_cb(id)
 
 
     " update Log buffer and short term memory buffer
-    call setbufline(lognr, '$', getbufline(lognr, '$')[0] . l:content[0])
+    call setbufline(gptbufnr, '$', getbufline(gptbufnr, '$')[0] . l:content[0])
 
     if len(l:content) > 1
-      let log_lines = getbufline(lognr, 1, "$")->len()
-      call setbufline(lognr, log_lines + 1, l:content[1:])
+      let log_lines = getbufline(gptbufnr, 1, "$")->len()
+      call setbufline(gptbufnr, log_lines + 1, l:content[1:])
     endif
 
     " Follow the answer
-    let matching_windows = win_findbuf(lognr)
+    let matching_windows = win_findbuf(gptbufnr)
     for win in matching_windows
       :call win_execute(win, 'normal G$')
     endfor
   endif
 
   if has_key(choice, "finish_reason") && index(["stop", "length"], choice["finish_reason"]) >= 0
-   let lines = getbufline(lognr, gpt#utils#getpos(lognr, "'g")[1], '$')  " get all the new lines
+   let answer_start = gpt#utils#getpos(gptbufnr, "'g")[1]
+   let lines = getbufline(gptbufnr, answer_start, '$')  " get all the new lines
    let all = join(lines, '\n')  " join the lines with a newline character
 
    " commit memory
