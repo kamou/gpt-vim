@@ -18,7 +18,6 @@ fun! gpt#init(...) range
   end
 
   let b:lang = getbufvar(gpt#utils#bufnr(), "lang")
-  echomsg "lang: " . b:lang
   if !empty(b:lang)
       let l:context = "You: " . b:lang . " assistant, Your task: generate valid " . b:lang . " code. Answers: markdown formatted. Multiline " . b:lang . " code should always be properly fenced like this:\n```". b:lang ."\n// your code goes here\n```\nAvoid useless details."
   else
