@@ -176,7 +176,7 @@ fun! gpt#close()
   let bnr = bufnr(bname)
   let matching_windows = win_findbuf(bnr)
   for win in matching_windows
-    :call win_execute(win, ':q')
+    :call win_execute(win, ':close')
   endfor
 endfun
 
