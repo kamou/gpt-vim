@@ -3,6 +3,7 @@ fun! gpt#sessions#list()
   let bnr = bufadd("GPT Conversations")
   execute "vsplit" bufname(bnr)
   call setbufvar('$', "&number", v:false)
+  call setbufvar('$', "&modifiable", v:false)
   call setbufvar('$', "&relativenumber", v:false)
   call setbufvar('$', "&buftype", "nofile")
   call setbufvar('$', "&filetype", "gpt-list")
@@ -14,9 +15,11 @@ fun! gpt#sessions#update_list()
   let bnr = bufadd("GPT Conversations")
   call setbufvar(bnr, "&buftype", "nofile")
   call bufload(bnr)
+  call setbufvar(bnr, "&modifiable", v:true)
   call deletebufline("GPT Conversations", 1 , '$')
   let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
   call setbufline(bnr, 1, summaries)
+  call setbufvar(bnr, "&modifiable", v:false)
   return !empty(summaries)
 endfun
 
@@ -47,12 +50,14 @@ fun! gpt#sessions#select_list()
   endfor
 
 
+  call setbufvar(gpt#utils#bufnr(), "&modifiable", v:true)
   call deletebufline("GPT Log", 1 , '$')
   call appendbufline("GPT Log", '$', "SESSION ". l:id)
 
   for ln in split(l:content, "\n", 1)
     call appendbufline("GPT Log", '$', ln)
   endfor
+  call setbufvar(gpt#utils#bufnr(), "&modifiable", v:false)
 
   python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:id"), vim.eval("l:line"))
   let s:session_buffer = v:null

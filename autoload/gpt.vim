@@ -7,6 +7,7 @@ fun! gpt#init(...) range
   if !bufexists("GPT Log")
     let bnr = bufadd("GPT Log")
     call setbufvar(bnr, "&buftype", "nofile")
+    call setbufvar(bnr, "&modifiable", v:false)
     call setbufvar(bnr, "&filetype", "gpt")
     call setbufvar(bnr, "&syntax", "markdown")
     call setbufvar(bnr, "timer_id", v:null)
@@ -75,9 +76,12 @@ fun! gpt#assist(...) range
 
 
   let l:content = split(l:content, '\n', 1)
+
+  call setbufvar(gptbufnr, "&modifiable", v:true)
   for line in l:content
     call appendbufline(gptbufnr, '$', [line])
   endfor
+  call setbufvar(gptbufnr, "&modifiable", v:false)
 
   call gpt#show()
 
@@ -105,12 +109,14 @@ fun! s:timer_cb(id)
 
 
     " update Log buffer and short term memory buffer
+    call setbufvar(gptbufnr, "&modifiable", v:true)
     call setbufline(gptbufnr, '$', getbufline(gptbufnr, '$')[0] . l:content[0])
 
     if len(l:content) > 1
       let log_lines = getbufline(gptbufnr, 1, "$")->len()
       call setbufline(gptbufnr, log_lines + 1, l:content[1:])
     endif
+    call setbufvar(gptbufnr, "&modifiable", v:false)
 
     " Follow the answer
     let matching_windows = win_findbuf(gptbufnr)
@@ -132,7 +138,9 @@ fun! s:timer_cb(id)
    if choice["finish_reason"] == "stop"
      call timer_stop(a:id)
      call setbufvar(gptbufnr, "timer_id", v:null)
+     call setbufvar(gptbufnr, "&modifiable", v:true)
      call gpt#utils#trim(gptbufnr, "'g", "$")
+     call setbufvar(gptbufnr, "&modifiable", v:false)
      return v:false
    endif
 
@@ -184,7 +192,11 @@ fun! gpt#reset()
   let bname = bufname('%')
   python3 gpt.assistant.reset()
   let bnr = bufnr(bname)
+
+  call setbufvar(bnr, "&modifiable", v:true)
   call deletebufline(bnr, 1, '$')
+  call setbufvar(bnr, "&modifiable", v:false)
+
   let matching_windows = win_findbuf(bnr)
   for win in matching_windows
     :call win_execute(win, ':close')
