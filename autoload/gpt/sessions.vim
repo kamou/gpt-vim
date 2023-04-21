@@ -70,11 +70,17 @@ fun! gpt#sessions#select_list()
 endfun
 
 function gpt#sessions#delete()
-  let l:line = getline('.')
-  if !empty(l:line)
-    call pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:line\"))")
+  let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
+  call pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:summary\"))")
+  let closeit = !gpt#sessions#update_list()
+
+  if getbufvar(gpt#utils#bufnr(), "summary") == l:summary
+    call setbufvar(gpt#utils#bufnr(), "summary", v:null)
   end
-  call gpt#sessions#update_list()
+
+  if closeit
+    execute "silent bdelete ". bufnr('%')
+  end
 endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

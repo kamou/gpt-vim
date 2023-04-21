@@ -114,9 +114,9 @@ def get_summary_list(path):
     summaries.reverse()
     return summaries
 
-def set_conversation(path, line):
+def set_conversation(path, summary):
     global assistant
-    conv = get_conversation(path, line)
+    conv = get_conversation(path, summary)
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
     assistant.history = conv
 
@@ -198,8 +198,6 @@ def replace_conversation(summary, path):
     connection.close()
 
 def delete_conversation(path, summary):
-    summary = summary.strip().split(" ", maxsplit=1)[1]
-    print("deleting: ", summary)
     # Define the database name and table names
     database_name = os.path.join(path,'history.db')
     table_name = 'conversations'
@@ -219,7 +217,7 @@ def delete_conversation(path, summary):
     connection.close()
 
 
-def save_conversation(path):
+def save_conversation(path, summary=None):
     database_name = os.path.join(path,'history.db')
     # Define the database name and table names
     table_name = 'conversations'
@@ -239,7 +237,8 @@ def save_conversation(path):
         FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
     '''
-    summary = gen_summary().strip()
+    if not summary:
+        summary = gen_summary().strip()
     messages = assistant.history
 
     # Connect to the database and create the tables
