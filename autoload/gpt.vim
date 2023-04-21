@@ -130,6 +130,7 @@ fun! s:timer_cb(id)
    if choice["finish_reason"] == "stop"
      call timer_stop(a:id)
      let b:timer_id = v:null
+     call gpt#utils#trim(gptbufnr, "'g", "$")
      return v:false
    endif
 

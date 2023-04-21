@@ -30,7 +30,6 @@ function! gpt#utils#split_win(...)
   endif
 endfunction
 
-
 function! gpt#utils#bufnr() abort
   return bufnr("GPT Log")
 endfunction
@@ -93,5 +92,20 @@ function gpt#utils#line(pos, bnr)
   call win_gotoid(winid)
   return lines
 endfun
+
+function gpt#utils#trim(bnr, start, end)
+  " save current buffer
+  let cur_bnr = bufnr("%")
+
+  " go to target buffer
+  let winid = bufwinid(a:bnr)
+  call win_gotoid(winid)
+
+  exe getpos(a:start)[1] . ',' . getpos(a:end)[1] . 's/\s\+$//e'
+
+  " go back to original buffer
+  let winid = bufwinid(cur_bnr)
+  call win_gotoid(winid)
+endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
