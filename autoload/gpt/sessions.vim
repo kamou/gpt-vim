@@ -14,6 +14,7 @@ fun! gpt#sessions#update_list()
   let bnr = bufadd("GPT Conversations")
   call setbufvar(bnr, "&buftype", "nofile")
   call bufload(bnr)
+  call deletebufline("GPT Conversations", 1 , '$')
   let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
   call setbufline(bnr, 1, summaries)
   return !empty(summaries)
@@ -58,5 +59,12 @@ fun! gpt#sessions#select_list()
   :q
   call gpt#show()
 endfun
+
+function gpt#sessions#delete()
+  let l:line = getline('.')
+  let l:id = pyeval("gpt.get_conversation_id_from_summary(vim.eval(\"l:line\"))")
+  let l:messages = pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:id\"))")
+  call gpt#sessions#update_list()
+endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

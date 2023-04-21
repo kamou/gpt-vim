@@ -203,6 +203,44 @@ def replace_conversation(id, path):
     # Close the database connection
     connection.close()
 
+def delete_conversation(path, conversation_id):
+    database_name = os.path.join(path,'history.db')
+    # Define the database name and table names
+    table_name = 'conversations'
+    messages_table_name = 'messages'
+
+    # Connect to the database and create the tables
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+
+    # Get the number of messages in the conversation being deleted
+    count_query = f"SELECT COUNT(*) FROM {messages_table_name} WHERE my_table_id=?;"
+    cursor.execute(count_query, (conversation_id,))
+    num_messages = cursor.fetchone()[0]
+
+    # Delete the conversation and corresponding messages
+    delete_query = f"DELETE FROM {table_name} WHERE id=?;"
+    cursor.execute(delete_query, (conversation_id,))
+    connection.commit()
+
+    delete_query = f"DELETE FROM {messages_table_name} WHERE my_table_id=?;"
+    cursor.execute(delete_query, (conversation_id,))
+    connection.commit()
+
+    # Update conversation IDs after deleting
+    update_query = f"UPDATE {table_name} SET id=id-1 WHERE id>?;"
+    cursor.execute(update_query, (conversation_id,))
+    connection.commit()
+
+    # Update message IDs after deleting
+    if num_messages > 0:
+        update_query = f"UPDATE {messages_table_name} SET my_table_id=my_table_id-1 WHERE my_table_id>?;"
+        cursor.execute(update_query, (conversation_id,))
+        connection.commit()
+
+    connection.close()
+
+
 def save_conversation(session, path):
     database_name = os.path.join(path,'history.db')
     # Define the database name and table names
