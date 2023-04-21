@@ -2,9 +2,6 @@
 let g:gpt#plugin_dir = expand('~/.gpt-vim/history')
 
 fun! gpt#init(...) range
-  if !(index(["GPT Log", "GPT Conversations"], bufname('%')) >= 0)
-    let b:lang = &filetype
-  end
 
   " Chat transcript buffer
   if !bufexists("GPT Log")
@@ -16,7 +13,12 @@ fun! gpt#init(...) range
     call bufload(bnr)
   end
 
-  let b:lang = getbufvar(bufnr("BPT Log"), "lang")
+  if !(index(["GPT Log", "GPT Conversations"], bufname('%')) >= 0)
+    call setbufvar(gpt#utils#bufnr(), "lang", &filetype)
+  end
+
+  let b:lang = getbufvar(gpt#utils#bufnr(), "lang")
+  echomsg "lang: " . b:lang
   if !empty(b:lang)
       let l:context = "You: " . b:lang . " assistant, Task: generate valid " . b:lang . " code. Answers: markdown formatted. " . b:lang . " code preceded with ```". b:lang .", indentation must always use tabs not spaces"
   else
