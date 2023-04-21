@@ -197,6 +197,7 @@ fun! gpt#reset()
   call setbufvar(bnr, "&modifiable", v:true)
   call deletebufline(bnr, 1, '$')
   call setbufvar(bnr, "&modifiable", v:false)
+  call setbufvar(bnr, "summary", v:null)
 
   let matching_windows = win_findbuf(bnr)
   for win in matching_windows
