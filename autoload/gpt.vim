@@ -20,7 +20,7 @@ fun! gpt#init(...) range
   let b:lang = getbufvar(gpt#utils#bufnr(), "lang")
   echomsg "lang: " . b:lang
   if !empty(b:lang)
-      let l:context = "You: " . b:lang . " assistant, Task: generate valid " . b:lang . " code. Answers: markdown formatted. " . b:lang . " code preceded with ```". b:lang .", indentation must always use tabs not spaces"
+      let l:context = "You: " . b:lang . " assistant, Your task: generate valid " . b:lang . " code. Answers: markdown formatted. Multiline " . b:lang . " code should always be properly fenced like this:\n```". b:lang ."\n// your code goes here\n```\nAvoid useless details."
   else
       let l:context = "The user will ask you to generate code. Before generating code, Explain in details what steps need to be done in order to achieve the final result"
   endif
