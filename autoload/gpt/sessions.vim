@@ -15,27 +15,30 @@ fun! gpt#sessions#update_list()
   let bnr = bufadd("GPT Conversations")
   call setbufvar(bnr, "&buftype", "nofile")
   call bufload(bnr)
+  let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
+
   call setbufvar(bnr, "&modifiable", v:true)
   call deletebufline("GPT Conversations", 1 , '$')
-  let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
-  call setbufline(bnr, 1, summaries)
+
+  if !empty(summaries)
+    call setbufline(bnr, 1, summaries)
+  end
   call setbufvar(bnr, "&modifiable", v:false)
   return !empty(summaries)
 endfun
 
-fun! gpt#sessions#save_conversation(id)
-  python3 gpt.save_conversation(vim.eval("a:id"), vim.eval("g:gpt#plugin_dir"))
+fun! gpt#sessions#save_conversation()
+  python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
 endfun
 
-fun! gpt#sessions#update_conversation(id)
-  python3 gpt.replace_conversation(vim.eval("a:id"), vim.eval("g:gpt#plugin_dir"))
+fun! gpt#sessions#update_conversation(summary)
+  python3 gpt.replace_conversation(vim.eval("a:summary"), vim.eval("g:gpt#plugin_dir"))
 endfun
 
 fun! gpt#sessions#select_list()
   call gpt#init()
-  let l:line = getline('.')
-  let l:id = pyeval("gpt.get_conversation_id_from_summary(vim.eval(\"l:line\"))")
-  let l:messages = pyeval("gpt.get_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:line\"))")
+  let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
+  let l:messages = pyeval("gpt.get_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:summary\"))")
 
   let l:content = ""
   for message in l:messages
@@ -52,14 +55,14 @@ fun! gpt#sessions#select_list()
 
   call setbufvar(gpt#utils#bufnr(), "&modifiable", v:true)
   call deletebufline("GPT Log", 1 , '$')
-  call appendbufline("GPT Log", '$', "SESSION ". l:id)
+  call setbufvar(gpt#utils#bufnr(),"summary", l:summary )
 
   for ln in split(l:content, "\n", 1)
     call appendbufline("GPT Log", '$', ln)
   endfor
   call setbufvar(gpt#utils#bufnr(), "&modifiable", v:false)
 
-  python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:id"), vim.eval("l:line"))
+  python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:summary"))
   let s:session_buffer = v:null
   :q
   call gpt#show()
@@ -67,8 +70,9 @@ endfun
 
 function gpt#sessions#delete()
   let l:line = getline('.')
-  let l:id = pyeval("gpt.get_conversation_id_from_summary(vim.eval(\"l:line\"))")
-  let l:messages = pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:id\"))")
+  if !empty(l:line)
+    call pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:line\"))")
+  end
   call gpt#sessions#update_list()
 endfunction
 

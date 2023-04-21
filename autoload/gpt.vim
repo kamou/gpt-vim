@@ -11,6 +11,7 @@ fun! gpt#init(...) range
     call setbufvar(bnr, "&filetype", "gpt")
     call setbufvar(bnr, "&syntax", "markdown")
     call setbufvar(bnr, "timer_id", v:null)
+    call setbufvar(bnr,"summary", v:null )
     call bufload(bnr)
   end
 
@@ -162,11 +163,11 @@ fun! gpt#terminate()
 endfun
 
 fun! gpt#save()
-  let l:session = gpt#utils#get_session_id()
-  if l:session == "default"
-    call gpt#sessions#save_conversation(l:session)
+  let b:summary = getbufvar(gpt#utils#bufnr(), "summary")
+  if empty(b:summary)
+    call gpt#sessions#save_conversation()
   else
-    call gpt#sessions#update_conversation(l:session)
+    call gpt#sessions#update_conversation(b:summary)
   end
   call gpt#sessions#update_list()
 endfun

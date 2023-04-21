@@ -1,9 +1,7 @@
 import os
 import vim
 import openai
-import json
 import tiktoken
-from contextlib import contextmanager
 import sqlite3
 openai.api_key = vim.eval("g:gpt_api_key")
 
@@ -94,6 +92,8 @@ def get_summary_list(path):
     database_name = os.path.join(path,'history.db')
     table_name = 'conversations'
     connection = sqlite3.connect(database_name)
+    connection.execute("PRAGMA foreign_keys = 1")
+
     cursor = connection.cursor()
 
     # Check if the conversations table exists
@@ -114,12 +114,7 @@ def get_summary_list(path):
     summaries.reverse()
     return summaries
 
-def get_conversation_id_from_summary(line):
-    id, _ = line.strip().split(" ", maxsplit=1)
-    id = int(id[1:-1])
-    return id
-
-def set_conversation(path, session, line):
+def set_conversation(path, line):
     global assistant
     conv = get_conversation(path, line)
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
@@ -135,18 +130,18 @@ def gen_summary(history):
     return response["choices"][0]["message"]["content"]
 
 
-def get_conversation(path, line):
-    id = get_conversation_id_from_summary(line)
-
+def get_conversation(path, summary):
     # Define the database name and table names
     database_name = os.path.join(path, 'history.db')
     messages_table_name = 'messages'
 
     # Connect to the database and execute the query
     connection = sqlite3.connect(database_name)
+    connection.execute("PRAGMA foreign_keys = 1")
+
     cursor = connection.cursor()
-    select_query = f"SELECT id, role, content FROM {messages_table_name} WHERE my_table_id = ?;"
-    cursor.execute(select_query, (id,))
+    select_query = f"SELECT id, role, content FROM {messages_table_name} WHERE conversation_summary = ?;"
+    cursor.execute(select_query, (summary,))
     results = cursor.fetchall()
 
     # Create a list of messages from the results
@@ -157,91 +152,74 @@ def get_conversation(path, line):
 
     return messages
 
-def replace_conversation(id, path):
-    id = int(id)
-
+def replace_conversation(summary, path):
     # Define the database name and table names
     database_name = os.path.join(path,'history.db')
-    table_name = 'conversations'
     messages_table_name = 'messages'
 
     # Define the schema for the tables
     schema = '''
     CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        summary TEXT
+        summary TEXT PRIMARY KEY
     );
 
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        my_table_id INTEGER,
+        conversation_summary TEXT,
         role TEXT,
         content TEXT,
-        FOREIGN KEY (my_table_id) REFERENCES my_table(id)
+        FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
     '''
-    messages = assistant.history
+    message = assistant.history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
+    connection.execute("PRAGMA foreign_keys = 1")
+
     cursor = connection.cursor()
     cursor.executescript(schema)
     connection.commit()
 
     # Remove all messages for the conversation
-    cursor.execute(f"DELETE FROM {messages_table_name} WHERE my_table_id=?", (id,))
+    cursor.execute(f"DELETE FROM {messages_table_name} WHERE conversation_summary=?", (summary,))
     connection.commit()
 
     # Insert the new messages
+    messages = assistant.history
     for message in messages:
         role = message['role']
         content = message['content']
-        insert_query = f"INSERT INTO {messages_table_name} (my_table_id, role, content) VALUES (?, ?, ?);"
-        cursor.execute(insert_query, (id, role, content))
+        insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
+        cursor.execute(insert_query, (summary, role, content))
         connection.commit()
 
     # Close the database connection
     connection.close()
 
-def delete_conversation(path, conversation_id):
-    database_name = os.path.join(path,'history.db')
+def delete_conversation(path, summary):
+    summary = summary.strip().split(" ", maxsplit=1)[1]
+    print("deleting: ", summary)
     # Define the database name and table names
+    database_name = os.path.join(path,'history.db')
     table_name = 'conversations'
     messages_table_name = 'messages'
 
-    # Connect to the database and create the tables
+    # Connect to the database and delete the conversation and its messages
     connection = sqlite3.connect(database_name)
+    connection.execute("PRAGMA foreign_keys = 1")
+
     cursor = connection.cursor()
-
-    # Get the number of messages in the conversation being deleted
-    count_query = f"SELECT COUNT(*) FROM {messages_table_name} WHERE my_table_id=?;"
-    cursor.execute(count_query, (conversation_id,))
-    num_messages = cursor.fetchone()[0]
-
-    # Delete the conversation and corresponding messages
-    delete_query = f"DELETE FROM {table_name} WHERE id=?;"
-    cursor.execute(delete_query, (conversation_id,))
+    cursor.execute(f"DELETE FROM {table_name} WHERE summary=?", (summary,))
+    connection.commit()
+    cursor.execute(f"DELETE FROM {messages_table_name} WHERE conversation_summary=?", (summary,))
     connection.commit()
 
-    delete_query = f"DELETE FROM {messages_table_name} WHERE my_table_id=?;"
-    cursor.execute(delete_query, (conversation_id,))
-    connection.commit()
-
-    # Update conversation IDs after deleting
-    update_query = f"UPDATE {table_name} SET id=id-1 WHERE id>?;"
-    cursor.execute(update_query, (conversation_id,))
-    connection.commit()
-
-    # Update message IDs after deleting
-    if num_messages > 0:
-        update_query = f"UPDATE {messages_table_name} SET my_table_id=my_table_id-1 WHERE my_table_id>?;"
-        cursor.execute(update_query, (conversation_id,))
-        connection.commit()
-
+    # Close the database connection
     connection.close()
 
 
-def save_conversation(session, path):
+def save_conversation(path):
     database_name = os.path.join(path,'history.db')
     # Define the database name and table names
     table_name = 'conversations'
@@ -250,36 +228,36 @@ def save_conversation(session, path):
     # Define the schema for the tables
     schema = '''
     CREATE TABLE IF NOT EXISTS conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        summary TEXT
+        summary TEXT PRIMARY KEY
     );
 
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        my_table_id INTEGER,
+        conversation_summary TEXT,
         role TEXT,
         content TEXT,
-        FOREIGN KEY (my_table_id) REFERENCES my_table(id)
+        FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
     '''
-    summary = gen_summary(assistant.history)
+    summary = gen_summary(assistant.history).strip()
     messages = assistant.history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
+    connection.execute("PRAGMA foreign_keys = 1")
+
     cursor = connection.cursor()
     cursor.executescript(schema)
     connection.commit()
 
-    insert_query = f"INSERT INTO {table_name} (summary) VALUES (?);"
+    insert_query = f"INSERT OR IGNORE INTO {table_name} (summary) VALUES (?);"
     cursor.execute(insert_query, (summary,))
     connection.commit()
-    my_table_id = cursor.lastrowid
     for message in messages:
         role = message['role']
         content = message['content']
-        insert_query = f"INSERT INTO {messages_table_name} (my_table_id, role, content) VALUES (?, ?, ?);"
-        cursor.execute(insert_query, (my_table_id, role, content))
+        insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
+        cursor.execute(insert_query, (summary, role, content))
         connection.commit()
 
     connection.close()
