@@ -11,7 +11,7 @@ The purpose of this pugin is to assist you for your various development tasks.
  - GPT can recall previous messages from the current session.
  - Selected text/code is appended to the prompt.
  - GPT is aware of the language of your current buffer.
- - Multiple sessions.
+ - Multiple sessions. You can save a session and continue the conversation later if needed.
 
 ## Requirements
 
