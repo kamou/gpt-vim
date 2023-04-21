@@ -49,4 +49,49 @@ function! gpt#utils#visual_selection() abort
   endtry
 endfunction
 
+function gpt#utils#getpos(bnr, mark)
+  " save current buffer
+  let cur_bnr = bufnr("%")
+
+  " go to target buffer
+  let winid = bufwinid(a:bnr)
+  call win_gotoid(winid)
+  let pos = getpos(a:mark) " set mark '.' to end of buffer
+
+  " go back to original buffer
+  let winid = bufwinid(cur_bnr)
+  call win_gotoid(winid)
+  return pos
+endfunction
+
+function gpt#utils#setpos(bnr, mark, pos)
+  " save current buffer
+  let cur_bnr = bufnr("%")
+
+  " go to target buffer
+  let winid = bufwinid(a:bnr)
+  call win_gotoid(winid)
+  let ret = setpos(a:mark, [a:bnr, a:pos[0], a:pos[1]]) " set mark '.' to end of buffer
+
+  " go back to original buffer
+  let winid = bufwinid(cur_bnr)
+  call win_gotoid(winid)
+  return ret
+endfunction
+
+function gpt#utils#line(pos, bnr)
+  " save current buffer
+  let cur_bnr = bufnr("%")
+
+  " go to target buffer
+  let winid = bufwinid(a:bnr)
+  call win_gotoid(winid)
+  let lines = line(a:pos)
+
+  " go back to original buffer
+  let winid = bufwinid(cur_bnr)
+  call win_gotoid(winid)
+  return lines
+endfun
+
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

@@ -6,14 +6,6 @@ fun! gpt#init(...) range
     let b:lang = &filetype
   end
 
-  if !bufexists("GPT STM")
-    let bnr = bufadd("GPT STM")
-    call setbufvar(bnr, "&buftype", "nofile")
-    call setbufvar(bnr, "&filetype", "gpt")
-    call setbufvar(bnr, "&syntax", "markdown")
-    call bufload(bnr)
-  endif
-
   " Chat transcript buffer
   if !bufexists("GPT Log")
     let bnr = bufadd("GPT Log")
@@ -61,6 +53,8 @@ fun! gpt#assist(...) range
     return
   endif
 
+  execute 'delmarks g'
+
   let l:prompt = input("> ")
   if empty(l:prompt)
     return
@@ -85,6 +79,8 @@ fun! gpt#assist(...) range
   endfor
 
   call gpt#show()
+
+  call gpt#utils#setpos(gptbufnr,"'g", [gpt#utils#line('$', gptbufnr), 1]) " set mark '.' to end of buffer
   call setbufvar(gptbufnr, "timer_id", v:null)
   let b:timer_id = timer_start(10, "s:timer_cb", {'repeat': -1})
 endfun
@@ -95,6 +91,7 @@ fun! gpt#visual_assist(...) range
 endfun
 
 fun! s:timer_cb(id)
+  let lognr = gpt#utils#bufnr()
   call timer_pause(a:id, 1)
 
   let choice = py3eval("next(gpt.last_response)['choices'][0]")
@@ -105,18 +102,13 @@ fun! s:timer_cb(id)
     let l:content = delta["content"]
     let l:content = split(l:content, '\n', 1)
 
-    let streamnr = bufnr("GPT STM")
-    let lognr = bufnr("GPT Log")
 
     " update Log buffer and short term memory buffer
-    call setbufline(streamnr, '$', getbufline(streamnr, '$')[0] . l:content[0])
     call setbufline(lognr, '$', getbufline(lognr, '$')[0] . l:content[0])
 
     if len(l:content) > 1
       let log_lines = getbufline(lognr, 1, "$")->len()
-      let stream_lines = getbufline(streamnr, 1, "$")->len()
       call setbufline(lognr, log_lines + 1, l:content[1:])
-      call setbufline(streamnr, stream_lines + 1, l:content[1:])
     endif
 
     " Follow the answer
@@ -127,7 +119,7 @@ fun! s:timer_cb(id)
   endif
 
   if has_key(choice, "finish_reason") && index(["stop", "length"], choice["finish_reason"]) >= 0
-   let lines = getbufline(bufnr("GPT STM"), 1, '$')  " get all lines in the buffer
+   let lines = getbufline(lognr, gpt#utils#getpos(lognr, "'g")[1], '$')  " get all the new lines
    let all = join(lines, '\n')  " join the lines with a newline character
 
    " commit memory
@@ -138,7 +130,6 @@ fun! s:timer_cb(id)
    if choice["finish_reason"] == "stop"
      call timer_stop(a:id)
      let b:timer_id = v:null
-     call deletebufline(bufnr("GPT STM"), 1 , '$')
      return v:false
    endif
 
