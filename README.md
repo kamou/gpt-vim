@@ -47,6 +47,11 @@ vnoremap <silent> <leader><space> :'<,'>call gpt#visual_assist()<cr>
   - `s` save the current session history
   - `L` list previously saved sessions (press enter to load selected session)
 
+## Session list keys
+  - `q` close the list
+  - `d` delete the session under the cursor
+  - `Enter` select the session under the cursor
+
 
 ## Bonus
 
