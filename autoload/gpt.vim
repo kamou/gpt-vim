@@ -184,10 +184,7 @@ endfun
 fun! gpt#close()
   let bname = bufname('%')
   let bnr = bufnr(bname)
-  let matching_windows = win_findbuf(bnr)
-  for win in matching_windows
-    :call win_execute(win, ':close')
-  endfor
+  execute "silent close " .  bnr
 endfun
 
 fun! gpt#reset()
@@ -199,11 +196,6 @@ fun! gpt#reset()
   call deletebufline(bnr, 1, '$')
   call setbufvar(bnr, "&modifiable", v:false)
   call setbufvar(bnr, "summary", v:null)
-
-  let matching_windows = win_findbuf(bnr)
-  for win in matching_windows
-    :call win_execute(win, ':close')
-  endfor
 endfun
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
