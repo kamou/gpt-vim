@@ -83,8 +83,8 @@ fun! gpt#assist(...) range
   call gpt#show()
 
   call gpt#utils#setpos(gptbufnr,"'g", [gpt#utils#line('$', gptbufnr), 1]) " set mark '.' to end of buffer
-  call setbufvar(gptbufnr, "timer_id", v:null)
-  let b:timer_id = timer_start(10, "s:timer_cb", {'repeat': -1})
+  let l:timer_id = timer_start(10, "s:timer_cb", {'repeat': -1})
+  call setbufvar(gptbufnr, "timer_id", l:timer_id)
 endfun
 
 fun! gpt#visual_assist(...) range
@@ -146,8 +146,10 @@ endfun
 
 fun! gpt#terminate()
   let gptbufnr = gpt#utils#bufnr()
+  let l:timer_id = getbufvar(gptbufnr, "timer_id")
+  echomsg "timer id: " .l:timer_id
   if !getbufvar(gptbufnr, "timer_id")->empty()
-    call timer_stop(b:timer_id)
+    call timer_stop(l:timer_id)
   end
 endfun
 
