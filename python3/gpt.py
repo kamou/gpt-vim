@@ -120,10 +120,10 @@ def set_conversation(path, line):
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
     assistant.history = conv
 
-def gen_summary(history):
+def gen_summary():
     assist = Assistant(context="in no more than five words, describe the topic of the following conversation")
 
-    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in history ]
+    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in assistant.history ]
 
     messages = "==========".join(messages)
     response = assist.user_say(messages + "\n\ndescribe the main topic of this conversation in 5 words")
@@ -239,7 +239,7 @@ def save_conversation(path):
         FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
     '''
-    summary = gen_summary(assistant.history).strip()
+    summary = gen_summary().strip()
     messages = assistant.history
 
     # Connect to the database and create the tables

@@ -165,7 +165,8 @@ endfun
 fun! gpt#save()
   let b:summary = getbufvar(gpt#utils#bufnr(), "summary")
   if empty(b:summary)
-    call gpt#sessions#save_conversation()
+    let summary = gpt#sessions#save_conversation()
+    call setbufvar(gpt#utils#bufnr(), "summary", l:summary)
   else
     call gpt#sessions#update_conversation(b:summary)
   end

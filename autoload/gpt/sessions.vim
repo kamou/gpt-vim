@@ -29,6 +29,7 @@ endfun
 
 fun! gpt#sessions#save_conversation()
   python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
+  return pyeval("gpt.gen_summary()")
 endfun
 
 fun! gpt#sessions#update_conversation(summary)
