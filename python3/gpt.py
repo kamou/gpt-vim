@@ -170,6 +170,10 @@ def replace_conversation(summary, path):
         content TEXT,
         FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS version (
+        version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
+    );
     '''
     message = assistant.history
 
@@ -217,7 +221,7 @@ def delete_conversation(path, summary):
     connection.close()
 
 
-def save_conversation(path, summary=None):
+def save_conversation(path, summary=None, messages=None):
     database_name = os.path.join(path,'history.db')
     # Define the database name and table names
     table_name = 'conversations'
@@ -236,10 +240,17 @@ def save_conversation(path, summary=None):
         content TEXT,
         FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS version (
+        version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
+    );
+
     '''
     if not summary:
         summary = gen_summary().strip()
-    messages = assistant.history
+
+    if not messages:
+        messages = assistant.history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
@@ -258,8 +269,67 @@ def save_conversation(path, summary=None):
         insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
         cursor.execute(insert_query, (summary, role, content))
         connection.commit()
+    connection.close()
+
+
+def check_and_update_db(path):
+    database_name = os.path.join(path,'history.db')
+    if get_version_number(path) == 1:
+        print("Updating conversation database to v2")
+        conversations = extract_conversations_v1(path)
+        os.remove(database_name)
+        for conv in conversations:
+            summary = conv["summary"]
+            messages = [ { "role": message[2], "content": message[3] } for message in conv["messages"] ]
+            save_conversation(path, summary, messages)
+    set_version_number(path, 2)
+
+def get_version_number(path):
+    database_name = os.path.join(path,'history.db')
+    conn = sqlite3.connect(database_name)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT version FROM version')
+    except sqlite3.OperationalError as e:
+        return 1
+
+    version_number = cursor.fetchone()[0]
+    conn.close()
+
+    return version_number
+
+def set_version_number(path, version_number):
+    database_name = os.path.join(path, 'history.db')
+    conn = sqlite3.connect(database_name)
+    cursor = conn.cursor()
+    replace_query = f"INSERT OR REPLACE INTO version (version) VALUES (?);"
+    cursor.execute(replace_query, (version_number,))
+    conn.commit()
+    conn.close()
+
+def extract_conversations_v1(path):
+    database_name = os.path.join(path,'history.db')
+    # Define the database name and table names
+    table_name = 'conversations'
+    messages_table_name = 'messages'
+
+    # Connect to the database and retrieve the conversations
+    connection = sqlite3.connect(database_name)
+    cursor = connection.cursor()
+    cursor.execute(f"SELECT * FROM {table_name}")
+    conversations = cursor.fetchall()
+
+    # Create a dictionary to hold the conversations and their messages
+    conversations_dict = list()
+    for conversation in conversations:
+        conversation_id = conversation[0]
+        summary = conversation[1]
+        cursor.execute(f"SELECT * FROM {messages_table_name} WHERE my_table_id=?", (conversation_id,))
+        messages = cursor.fetchall()
+        conversations_dict.append({'summary': summary, 'messages': messages})
 
     connection.close()
+    return conversations_dict
 
 
 assistant = None

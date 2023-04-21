@@ -26,6 +26,9 @@ fun! gpt#init(...) range
       let l:context = "The user will ask you to generate code. Before generating code, Explain in details what steps need to be done in order to achieve the final result"
   endif
   python3 gpt.GptInitSession()
+
+  " Update DB if needed
+  call py3eval("gpt.check_and_update_db(vim.eval('g:gpt#plugin_dir'))")
 endfun
 
 fun! gpt#show(...) range
