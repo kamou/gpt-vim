@@ -33,7 +33,7 @@ fun! gpt#init(...) range
   python3 gpt.GptInitSession()
 endfun
 
-fun! gpt#popup(...) range
+fun! gpt#show(...) range
   let cur_bnr = bufnr("%")
 
   let gptbufnr = gpt#utils#bufnr()
@@ -84,7 +84,7 @@ fun! gpt#assist(...) range
     call appendbufline(gptbufnr, '$', [line])
   endfor
 
-  call gpt#popup()
+  call gpt#show()
   call setbufvar(gptbufnr, "timer_id", v:null)
   let b:timer_id = timer_start(10, "s:timer_cb", {'repeat': -1})
 endfun

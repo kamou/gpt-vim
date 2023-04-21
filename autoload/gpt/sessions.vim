@@ -56,7 +56,7 @@ fun! gpt#sessions#select_list()
   python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:id"), vim.eval("l:line"))
   let s:session_buffer = v:null
   :q
-  call gpt#popup()
+  call gpt#show()
 endfun
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
