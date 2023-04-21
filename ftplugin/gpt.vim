@@ -13,7 +13,7 @@ augroup END
 " Define new key mappings
 " TODO: actualy implement OpenOptions
 nnoremap <silent> <buffer> o :py3 gpt_nvim.gpt.OpenOptions()<CR>
-nnoremap <silent> <buffer> q :q<CR>
+nnoremap <silent> <buffer> q :call gpt#close()<CR>
 nnoremap <silent> <buffer> r :call gpt#reset()<CR>
 nnoremap <silent> <buffer> s :call gpt#save()<CR>
 nnoremap <silent> <buffer> L :call gpt#list()<CR>

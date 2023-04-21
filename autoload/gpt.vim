@@ -171,15 +171,23 @@ fun! gpt#list()
   end
 endfun
 
+fun! gpt#close()
+  let bname = bufname('%')
+  let bnr = bufnr(bname)
+  let matching_windows = win_findbuf(bnr)
+  for win in matching_windows
+    :call win_execute(win, ':q')
+  endfor
+endfun
+
 fun! gpt#reset()
   let bname = bufname('%')
-  let l:session = gpt#utils#get_session_id()
   python3 gpt.assistant.reset()
   let bnr = bufnr(bname)
   call deletebufline(bnr, 1, '$')
   let matching_windows = win_findbuf(bnr)
   for win in matching_windows
-    :call win_execute(win, ':q')
+    :call win_execute(win, ':close')
   endfor
 endfun
 
