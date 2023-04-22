@@ -91,9 +91,6 @@ function s:timer_cb(id) abort
     if chunk["finish_reason"] == "stop"
       call timer_stop(a:id)
       call setbufvar(Wchat.bufnr, "timer_id", v:null)
-      " call setbufvar(Wchat.bufnr, "&modifiable", v:true)
-      " call gpt#utils#trim(Wchat.bufnr, "'g", "$")
-      " call setbufvar(Wchat.bufnr, "&modifiable", v:false)
       return v:false
     endif
 
