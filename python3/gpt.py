@@ -62,9 +62,19 @@ class Assistant(object):
         self.history = []
 
 
+def GptGetNextChunk():
+    return next(last_response)['choices'][0]
+
+def GptUpdate():
+    global assistant
+    message = vim.eval("a:message")
+    assistant.update(message)
+    open("history.json", "w").write(str(assistant.history))
+
+
 def GptInitSession():
     global assistant
-    context = vim.eval("l:context")
+    context = vim.eval("a:context")
     if assistant == None:
         assistant =  Assistant(memory=0, context=context)
     else:

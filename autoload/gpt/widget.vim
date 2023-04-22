@@ -44,11 +44,9 @@ function gpt#widget#GenericWidget(name, ...) abort
   let w["bufnr"] = bnr
 
   let w = gpt#widget#construct(w)
-  let g:__GPTVIMWidgets__[a:name] = w
-  call extend({"gpt": ["GPT Chat", ""]}, get(g:, 'airline_filetype_overrides', {}), 'force')
 
-  if exists('*airline#add_statusline_func')
-    function GptAirlineHook(...)
+  if exists('*airline#add_statusline_func') && !len(g:__GPTVIMWidgets__)
+    function! GptAirlineHook(...)
       " TODO: add configuration information ?
       if &filetype =~ '^gpt'
         let w:airline_section_a = '%f'
@@ -61,24 +59,26 @@ function gpt#widget#GenericWidget(name, ...) abort
     call airline#add_statusline_func('GptAirlineHook')
   endif
 
+  let g:__GPTVIMWidgets__[a:name] = w
+
   return w
 
 endfunction
 
 
-function gpt#widget#construct(w)
-  let self = a:w
+function gpt#widget#construct(widget) abort
+  let widget = a:widget
   " autofocus by default
-  let self.autofocus = v:true
+  let widget["autofocus"] = v:true
 
-  function self.configure_axis(axis, ...)
+  function widget.configure_axis(axis, ...)
     " -1 means half
     let self["size"] = get(a:, 1, -1)
     let self["axis"] = a:axis
     return self
   endfunction
 
-  function self.get_axis()
+  function widget.get_axis()
 
     let vert = winwidth(0) > winheight(0) * 2
 
@@ -90,17 +90,18 @@ function gpt#widget#construct(w)
 
   endfunction
 
-  function self.resize()
+  function widget.resize()
     if self.get_axis() != "auto"
       execute self.get_axis() .. ' resize ' .. self.size
     endif
   endfunction
 
-  function self.set_autofocus(enable)
+  function widget.set_autofocus(enable)
     let self.autofocus = a:enable
   endfunction
 
-  function self.show()
+  function widget.show()
+    let cur_bnr = bufnr("%")
     let tabpage_buffers = tabpagebuflist()
 
     if index(tabpage_buffers, self.bufnr) == -1
@@ -108,25 +109,80 @@ function gpt#widget#construct(w)
       call self.resize()
     endif
 
-    if self.autofocus
-      let winid = bufwinid(self.bufnr)
+    if !self.autofocus
+      let winid = bufwinid(cur_bnr)
       call win_gotoid(winid)
     endif
   endfunction
 
-  function self.imap()
+  function widget.buf_append_line(line) abort
+    call setbufvar(self.bufnr, "&modifiable", v:true)
+    call appendbufline(self.bufnr, '$', [a:line])
+    call setbufvar(self.bufnr, "&modifiable", v:false)
   endfunction
 
-  function self.nmap()
+  function widget.buf_append_lines(lines) abort
+    for line in a:lines
+      call self.buf_append_line(line)
+    endfor
   endfunction
 
-  function self.vmap()
+  function widget.buf_append_text(text) abort
+    let l:text = split(a:text, '\n', 1)
+    call self.buf_append_lines(l:text)
   endfunction
 
-  function self.unmap()
+  function widget.get_line(pos) abort
+    return getbufline(self.bufnr, a:pos)[0]
   endfunction
 
-  return self
+  function widget.get_lines(start, end) abort
+    return getbufline(self.bufnr, a:start, a:end)
+  endfunction
+
+  function widget.set_line(pos, line) abort
+    call setbufvar(self.bufnr, "&modifiable", v:true)
+    call setbufline(self.bufnr, a:pos, [ a:line ])
+    " call setbufline(Wchat.bufnr, '$', getbufline(Wchat.bufnr, '$')[0] . l:content[0])
+    call setbufvar(self.bufnr, "&modifiable", v:false)
+  endfunction
+
+  function widget.set_lines(pos, lines) abort
+    call setbufvar(self.bufnr, "&modifiable", v:true)
+    call setbufline(self.bufnr, a:pos, a:lines)
+    " call setbufline(Wchat.bufnr, '$', getbufline(Wchat.bufnr, '$')[0] . l:content[0])
+    call setbufvar(self.bufnr, "&modifiable", v:false)
+  endfunction
+
+  function widget.line_append_string(pos, line) abort
+    call self.set_line(a:pos, self.get_line(a:pos) .. a:line)
+  endfunction
+
+  function widget.hide() abort
+    execute "hide " ..  "\"" .. bufname(self.bufnr) .. "\""
+  endfunction
+
+  function widget.getpos(mark)
+    " save current buffer
+    let cur_bnr = gpt#utils#switchwin(self.bufnr)
+
+    let pos = getpos(a:mark) " set mark '.' to end of buffer
+
+    " go back to original buffer
+    let cur_bnr = gpt#utils#switchwin(cur_bnr)
+
+    return pos
+  endfunction
+
+  function widget.setvar(name, value)
+    call setbufvar(self.bufnr, a:name, a:value)
+  endfunction
+
+  function widget.getvar(name)
+    return getbufvar(self.bufnr, a:name)
+  endfunction
+
+  return widget
 endfunction
 
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0
