@@ -65,7 +65,7 @@ fun! gpt#sessions#select_list()
 
   python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:summary"))
   let s:session_buffer = v:null
-  execute "silent bdelete ". bufnr('%')
+  execute "silent close ". bufnr('%')
   call gpt#show()
 endfun
 
@@ -79,7 +79,7 @@ function gpt#sessions#delete()
   end
 
   if closeit
-    execute "silent bdelete ". bufnr('%')
+    execute "silent close ". bufnr('%')
   end
 endfunction
 
