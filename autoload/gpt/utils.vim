@@ -19,7 +19,7 @@ fun! gpt#utils#get_session_id()
   return "default"
 endfun
 
-function! gpt#utils#split_win(...)
+function gpt#utils#split_win(...)
   if a:0 > 0
     let l:bnr = a:1
   end
@@ -30,15 +30,15 @@ function! gpt#utils#split_win(...)
   endif
 endfunction
 
-function! gpt#utils#bufnr() abort
-  return bufnr("GPT Log")
+function gpt#utils#bufnr() abort
+  return bufnr("GPT Chat")
 endfunction
 
-function! gpt#utils#bufname() abort
+function gpt#utils#bufname() abort
   return "GPT Log"
 endfunction
 
-function! gpt#utils#visual_selection() abort
+function gpt#utils#visual_selection() abort
   try
     let a_save = @a
     silent! normal! gv"ay
@@ -78,6 +78,14 @@ function gpt#utils#setpos(bnr, mark, pos)
   return ret
 endfunction
 
+function gpt#utils#switchwin(bnr)
+  let cur_bnr = bufnr("%")
+
+  let winid = bufwinid(a:bnr)
+  call win_gotoid(winid)
+  return cur_bnr
+endfunction
+
 function gpt#utils#line(pos, bnr)
   " save current buffer
   let cur_bnr = bufnr("%")
@@ -106,6 +114,10 @@ function gpt#utils#trim(bnr, start, end)
   " go back to original buffer
   let winid = bufwinid(cur_bnr)
   call win_gotoid(winid)
+endfunction
+
+function gpt#utils#ours(bnr)
+  return getbufvar(a:bnr, "__GPT__") 
 endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

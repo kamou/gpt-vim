@@ -37,7 +37,7 @@ fun! gpt#sessions#update_conversation(summary)
 endfun
 
 fun! gpt#sessions#select_list()
-  call gpt#init()
+  " call gpt#init()
   let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
   let l:messages = pyeval("gpt.get_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:summary\"))")
 
@@ -55,18 +55,18 @@ fun! gpt#sessions#select_list()
 
 
   call setbufvar(gpt#utils#bufnr(), "&modifiable", v:true)
-  call deletebufline("GPT Log", 1 , '$')
+  call deletebufline("GPT Chat", 1 , '$')
   call setbufvar(gpt#utils#bufnr(),"summary", l:summary )
 
   for ln in split(l:content, "\n", 1)
-    call appendbufline("GPT Log", '$', ln)
+    call appendbufline("GPT Chat", '$', ln)
   endfor
   call setbufvar(gpt#utils#bufnr(), "&modifiable", v:false)
 
   python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:summary"))
   let s:session_buffer = v:null
   execute "silent close ". bufnr('%')
-  call gpt#show()
+  call gpt#widget#get("Chat").show()
 endfun
 
 function gpt#sessions#delete()
@@ -83,4 +83,4 @@ function gpt#sessions#delete()
   end
 endfunction
 
-"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
+" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

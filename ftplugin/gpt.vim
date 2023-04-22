@@ -5,9 +5,14 @@ set scrolloff=999
 augroup gpt
     autocmd!
     " autocmd OptionSet * if &filetype == 'gpt' | set syntax=markdown | endif
-    autocmd BufEnter * if bufname('%') == 'GPT Log' | set nocursorcolumn nocursorline | endif
-    autocmd BufEnter * if bufname('%') == 'GPT Log' | set wrap | endif
-    autocmd VimLeave *  call gpt#terminate()
+    autocmd BufEnter,BufLeave GPT\ * set wrap
+    autocmd BufEnter,BufLeave GPT\ * set nonumber
+    autocmd BufEnter,BufLeave GPT\ * set norelativenumber
+    autocmd BufEnter,BufLeave GPT\ * set nomodifiable
+    autocmd BufEnter,BufLeave GPT\ * set nocursorline
+    autocmd BufEnter,BufLeave GPT\ * set nocursorcolumn
+    autocmd VimLeave GPT\ Log  call gpt#terminate()
+    autocmd VimLeave GPT\ Chat  call gpt#terminate()
 augroup END
 
 " Define new key mappings
