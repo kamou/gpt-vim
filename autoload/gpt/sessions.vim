@@ -1,20 +1,43 @@
 
-fun! gpt#sessions#list()
+fun! gpt#sessions#init()
   let bnr = bufadd("GPT Conversations")
-  execute "vsplit" bufname(bnr)
-  call setbufvar('$', "&number", v:false)
-  call setbufvar('$', "&modifiable", v:false)
-  call setbufvar('$', "&relativenumber", v:false)
-  call setbufvar('$', "&buftype", "nofile")
-  call setbufvar('$', "&filetype", "gpt-list")
-  call setbufvar('$', "&syntax", "markdown")
-  :vertical resize 40
+  call setbufvar(bnr, "&number", v:false)
+  call setbufvar(bnr, "&modifiable", v:false)
+  call setbufvar(bnr, "&relativenumber", v:false)
+  call setbufvar(bnr, "&buftype", "nofile")
+  call setbufvar(bnr, "&filetype", "gpt-list")
+  call setbufvar(bnr, "&syntax", "markdown")
+  call bufload(bnr)
+  return bnr
+endfun
+
+fun! gpt#sessions#open()
+  let bnr  = bufnr("GPT Conversations")
+  if !(bnr >= 0)
+      let bnr = gpt#sessions#init()
+  end
+
+  if !(gpt#sessions#update_list())
+    echomsg "No session to display"
+    return
+  endif
+
+  let tabpage_buffers = tabpagebuflist()
+  if index(tabpage_buffers, bnr) == -1
+    execute "vsplit" bufname(bnr)
+    :vertical resize 40
+  endif
+
+  let winid = bufwinid(bnr)
+  call win_gotoid(winid)
 endfun
 
 fun! gpt#sessions#update_list()
-  let bnr = bufadd("GPT Conversations")
-  call setbufvar(bnr, "&buftype", "nofile")
-  call bufload(bnr)
+  let bnr = bufnr("GPT Conversations")
+  if !(bnr >= 0)
+    return
+  end
+
   let summaries = pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
 
   call setbufvar(bnr, "&modifiable", v:true)

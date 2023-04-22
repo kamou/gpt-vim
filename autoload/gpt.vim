@@ -26,6 +26,7 @@ fun! gpt#init(...) range
       let l:context = "The user will ask you to generate code. Before generating code, Explain in details what steps need to be done in order to achieve the final result"
   endif
   python3 gpt.GptInitSession()
+  call gpt#options#build()
 
   " Update DB if needed
   call py3eval("gpt.check_and_update_db(vim.eval('g:gpt#plugin_dir'))")
@@ -177,11 +178,7 @@ fun! gpt#save()
 endfun
 
 fun! gpt#list()
-  if gpt#sessions#update_list()
-    call gpt#sessions#list()
-  else
-    echomsg "No sessions to display"
-  end
+    call gpt#sessions#open()
 endfun
 
 fun! gpt#close()
@@ -199,6 +196,11 @@ fun! gpt#reset()
   call deletebufline(bnr, 1, '$')
   call setbufvar(bnr, "&modifiable", v:false)
   call setbufvar(bnr, "summary", v:null)
+endfun
+
+fun! gpt#options()
+  let bname = bufname('%')
+  call gpt#options#configure()
 endfun
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
