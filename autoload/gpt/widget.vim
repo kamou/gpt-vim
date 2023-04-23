@@ -141,16 +141,12 @@ function gpt#widget#construct(widget) abort
   endfunction
 
   function widget.set_line(pos, line) abort
-    call setbufvar(self.bufnr, "&modifiable", v:true)
-    call setbufline(self.bufnr, a:pos, [ a:line ])
-    " call setbufline(Wchat.bufnr, '$', getbufline(Wchat.bufnr, '$')[0] . l:content[0])
-    call setbufvar(self.bufnr, "&modifiable", v:false)
+    call self.set_lines(a:pos, [ a:line ])
   endfunction
 
   function widget.set_lines(pos, lines) abort
     call setbufvar(self.bufnr, "&modifiable", v:true)
     call setbufline(self.bufnr, a:pos, a:lines)
-    " call setbufline(Wchat.bufnr, '$', getbufline(Wchat.bufnr, '$')[0] . l:content[0])
     call setbufvar(self.bufnr, "&modifiable", v:false)
   endfunction
 
@@ -181,6 +177,13 @@ function gpt#widget#construct(widget) abort
   function widget.getvar(name)
     return getbufvar(self.bufnr, a:name)
   endfunction
+
+  function widget.delete_lines(start, end)
+    call self.setvar("&modifiable", v:true)
+    call deletebufline(self.bufnr, 1, '$')
+    call self.setvar("&modifiable", v:false)
+  endfunction
+
 
   return widget
 endfunction

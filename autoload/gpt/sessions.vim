@@ -39,8 +39,11 @@ function s:gpt_conv_build(name) abort
   endfun
 
   function Wconv.save_conv()
-    python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
-    return pyeval("gpt.gen_summary()")
+    if pyeval("len(gpt.assistant.history)")
+      python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
+      return pyeval("gpt.gen_summary()")
+    endif
+    return v:null
   endfunction
 
   function Wconv.update_conv(summary)

@@ -18,10 +18,10 @@ augroup END
 " Define new key mappings
 " TODO: actualy implement OpenOptions
 nnoremap <silent> <buffer> o :py3 gpt_nvim.gpt.OpenOptions()<CR>
-nnoremap <silent> <buffer> q :call gpt#close()<CR>
-nnoremap <silent> <buffer> r :call gpt#reset()<CR>
-nnoremap <silent> <buffer> s :call gpt#save()<CR>
-nnoremap <silent> <buffer> L :call gpt#list()<CR>
+nnoremap <silent> <buffer> q :call gpt#widget#get("Chat").close()<CR>
+nnoremap <silent> <buffer> r :call gpt#widget#get("Chat").reset()<CR>
+nnoremap <silent> <buffer> s :call gpt#widget#get("Conversations").save()<CR>
+nnoremap <silent> <buffer> L :call gpt#widget#get("Conversations").list()<CR>
 setlocal syntax=markdown
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

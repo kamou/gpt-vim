@@ -8,6 +8,7 @@ function gpt#assist(...) range abort
   let l:selection = a:0 > 0 ? a:1 : v:null
 
   let Wchat = gpt#chat#register(funcref('s:timer_cb'))
+  call gpt#sessions#register()
 
   " update the filetype according to the current buffer
   if !gpt#utils#ours(bufnr('%'))
@@ -108,35 +109,6 @@ function gpt#terminate()
   if !getbufvar(gptbufnr, "timer_id")->empty()
     call timer_stop(l:timer_id)
   endif
-endfunction
-
-function gpt#save()
-  let Wconv = gpt#sessions#register()
-  call Wconv.save()
-endfunction
-
-function gpt#list()
-  let Wconv = gpt#sessions#register()
-  call Wconv.list()
-  " call gpt#sessions#list()
-endfunction
-
-function gpt#close()
-  let Wchat =  gpt#widget#get("Chat")
-  if !empty(Wchat)
-    call Wchat.hide()
-  endif
-endfunction
-
-function gpt#reset()
-  let bname = bufname('%')
-  python3 gpt.assistant.reset()
-  let bnr = bufnr(bname)
-
-  call setbufvar(bnr, "&modifiable", v:true)
-  call deletebufline(bnr, 1, '$')
-  call setbufvar(bnr, "&modifiable", v:false)
-  call setbufvar(bnr, "summary", v:null)
 endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

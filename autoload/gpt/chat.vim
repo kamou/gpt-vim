@@ -94,11 +94,21 @@ function s:gpt_chat_build() abort
   endfunction
 
   function Wchat.get_summary() abort
-      return getbufvar(self.bufnr, "summary")
+      return self.getvar("summary")
   endfunction
 
   function Wchat.set_summary(summary) abort
-      return setbufvar(self.bufnr, "summary", a:summary)
+      return self.setvar("summary", a:summary)
+  endfunction
+
+  function Wchat.close() abort
+      call self.hide()
+  endfunction
+
+  function Wchat.reset() abort
+    python3 gpt.assistant.reset()
+    call self.delete_lines(1, '$')
+    call self.setvar("summary", v:null)
   endfunction
 
   return Wchat
