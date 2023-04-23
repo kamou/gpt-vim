@@ -12,11 +12,11 @@ function gpt#assist(...) range abort
 
   " update the filetype according to the current buffer
   if !gpt#utils#ours(bufnr('%'))
-    call Wchat.set_lang(&filetype)
+    call Wchat.SetLang(&filetype)
   endif
 
   " Cancel if currently streaming
-  if Wchat.is_streaming()
+  if Wchat.IsStreaming()
     echomsg 'Be polite, let GPT finish its answer'
     return
   endif
@@ -30,7 +30,7 @@ function gpt#assist(...) range abort
 
   " Append current selection to the prompt
   if !empty(l:selection)
-    let b:lang = Wchat.get_lang("lang")
+    let b:lang = Wchat.GetLang("lang")
     let l:prompt .= "\n```" . b:lang . "\n" . l:selection . "\n```"
   endif
 
@@ -41,10 +41,10 @@ function gpt#assist(...) range abort
   let l:content = l:content . l:prompt ."\n\n"
   let l:content = l:content . gpt#utils#build_header('Assistant')
 
-  call Wchat.buf_append_text(l:content)
-  call Wchat.show()
+  call Wchat.BufAppendString(l:content)
+  call Wchat.Show()
 
-  call Wchat.stream_start()
+  call Wchat.StreamStart()
 endfunction
 
 function gpt#visual_assist(...) range
@@ -56,7 +56,7 @@ function s:timer_cb(id) abort
   let Wchat = gpt#widget#get("Chat")
   call timer_pause(a:id, 1)
 
-  let chunk = Wchat.assist_get_chunk()
+  let chunk = Wchat.GetNextChunk()
   let delta = chunk["delta"]
   let index = chunk["index"]
 
@@ -65,11 +65,11 @@ function s:timer_cb(id) abort
 
     " update chat log
     " append to last line
-    call Wchat.line_append_string('$', l:content[0])
+    call Wchat.LineAppendString('$', l:content[0])
 
     " append to buffer if multiline
     if len(l:content) > 1
-      call Wchat.buf_append_lines(l:content[1:])
+      call Wchat.BufAppendLines(l:content[1:])
     endif
 
     " Follow the answer
@@ -80,13 +80,13 @@ function s:timer_cb(id) abort
   endif
 
   if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
-    let answer_start = Wchat.getpos("'g")[1]
+    let answer_start = Wchat.GetPos("'g")[1]
     let lines = getbufline(Wchat.bufnr, answer_start, '$')  " get all the new lines
     let content = join(lines, "\n")  " join the lines with a newline character
 
     " commit memory
     let message =  { "role": "assistant", "content" : content }
-    call Wchat.assist_update(message)
+    call Wchat.AssistUpdate(message)
 
     " done
     if chunk["finish_reason"] == "stop"
@@ -105,7 +105,7 @@ endfunction
 
 function gpt#terminate()
   let Wchat = gpt#widget#get("Chat")
-  if !Wchat.get_stream_id()->empty()
+  if !Wchat.GetStreamId()->empty()
     call timer_stop(l:timer_id)
   endif
 endfunction
