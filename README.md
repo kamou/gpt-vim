@@ -29,17 +29,17 @@ Plug 'kamou/gpt-vim'
 
 ## Available commands
 ```
-:call gpt#assist([sessionname])             # Launch the prompt
-:'<,'>call gpt#visual_assist([sessionname]) # Launch the prompt and append the current selection
+:call gpt#Assist(0)      # Launch the prompt
+:'<,'>call gpt#Assist(1) # Launch the prompt and append the current selection
 ```
 
-
-## Sample keymapping configuration
+## Default keymapping configuration
 ```
-map <silent> <leader><space> :<C-U>call gpt#assist()<cr>
-xnoremap <silent> <leader><space> :'<,'>call gpt#visual_assist()<cr>
-vnoremap <silent> <leader><space> :'<,'>call gpt#visual_assist()<cr>
+nmap <silent> gpa <Plug>(gpt-vim-assist)
+xmap <silent> gpa <Plug>(gpt-vim-assist-vis)
+vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 ```
+You may update it in you .vimrc file.
 
 ## GPT buffer keys
   - `r` reset current session memory, GPT will forget everything, the buffer will be cleared
