@@ -30,7 +30,7 @@ function gpt#assist(...) range abort
 
   " Append current selection to the prompt
   if !empty(l:selection)
-    let b:lang = Wchat.GetLang("lang")
+    let b:lang = Wchat.GetLang()
     let l:prompt .= "\n```" . b:lang . "\n" . l:selection . "\n```"
   endif
 
