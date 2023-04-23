@@ -4,12 +4,12 @@ runtime! ftplugin/markdown.vim
 set scrolloff=999
 augroup gpt
     autocmd!
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set wrap | endif
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nonumber | endif
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set norelativenumber | endif
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nomodifiable | endif
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nocursorline | endif
-  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nocursorcolumn | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal wrap | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal nonumber | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal norelativenumber | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal nomodifiable | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorline | endif
+  autocmd BufEnter * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorcolumn | endif
   autocmd VimLeave * call gpt#terminate()
 augroup END
 
