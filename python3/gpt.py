@@ -94,9 +94,8 @@ def GptUpdate():
 
 def GptReplay():
     global assistant
-    message = vim.eval("a:message")
     task = GPT_TASKS[vim.eval("self.name")]
-    task.send(message)
+    task.send()
 
 def GptCreateTask():
     name = vim.eval("self.name")
