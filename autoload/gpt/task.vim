@@ -30,7 +30,7 @@ function gpt#task#Update(message) dict
   return py3eval("gpt.GptUpdate()")
 endfunction
 
-function gpt#task#Replay(message) dict
+function gpt#task#Replay() dict
   return py3eval("gpt.GptReplay()")
 endfunction
 
