@@ -61,6 +61,21 @@ GPT-Vim provides two widgets: the `chat` widget and the `conversation` widget.
 The `chat` widget is used for generating conversational responses with the GPT
 tool, while the `conversation` widget is used for managing saved chat sessions.
 
+##### Launching the Chat Widget                         *gptvim-launch-chat*
+
+                                                                *gptvim-gpa*
+gpa                      Lauch the Chat widget.
+
+
+You can change these mappings like this:
+
+```vim
+nmap <silent> gpa <Plug>(gpt-vim-assist)
+xmap <silent> gpa <Plug>(gpt-vim-assist-vis)
+vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
+```
+In visual mode, the selection will be appended to the prompt.
+
 ##### Chat Mappings                             *gptvim-chatwidget-mappings*
 
 - `q`: Hide the chat widget.

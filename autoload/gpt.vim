@@ -1,11 +1,20 @@
-
 let g:gpt#plugin_dir = expand('~/.gpt-vim/history')
 
 
+" old api
+function gpt#visual_assist(...) range
+  let l:selection = gpt#utils#visual_selection()
+  call gpt#assist(l:selection)
+endfunction
 
 function gpt#assist(...) range abort
+  return gpt#Assist(a:0 > 0)
+endfunction
+
+" new api
+function gpt#Assist(vmode) range abort
   " Prepare func args
-  let l:selection = a:0 > 0 ? a:1 : v:null
+  let l:selection = a:vmode ? gpt#utils#visual_selection() : v:null
 
   let Wchat = gpt#chat#register(funcref('s:timer_cb'))
   call gpt#sessions#register()
@@ -45,11 +54,6 @@ function gpt#assist(...) range abort
   call Wchat.Show()
 
   call Wchat.StreamStart()
-endfunction
-
-function gpt#visual_assist(...) range
-  let l:selection = gpt#utils#visual_selection()
-  call gpt#assist(l:selection)
 endfunction
 
 
@@ -107,7 +111,7 @@ endfunction
 function gpt#terminate()
   let Wchat = gpt#widget#get("Chat")
   if !Wchat.GetStreamId()->empty()
-    call timer_stop(l:timer_id)
+    call timer_stop(Wchat.GetStreamId())
   endif
 endfunction
 
