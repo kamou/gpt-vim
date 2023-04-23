@@ -80,7 +80,7 @@ function s:timer_cb(id) abort
   endif
 
   if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
-    let answer_start = gpt#utils#getpos(Wchat.bufnr, "'g")[1]
+    let answer_start = Wchat.getpos("'g")[1]
     let lines = getbufline(Wchat.bufnr, answer_start, '$')  " get all the new lines
     let content = join(lines, "\n")  " join the lines with a newline character
 
@@ -104,9 +104,8 @@ function s:timer_cb(id) abort
 endfunction
 
 function gpt#terminate()
-  let gptbufnr = gpt#utils#bufnr()
-  let l:timer_id = getbufvar(gptbufnr, "timer_id")
-  if !getbufvar(gptbufnr, "timer_id")->empty()
+  let Wchat = gpt#widget#get("Chat")
+  if !Wchat.get_stream_id()->empty()
     call timer_stop(l:timer_id)
   endif
 endfunction

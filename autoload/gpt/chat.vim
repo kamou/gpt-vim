@@ -18,7 +18,7 @@ function s:gpt_chat_build() abort
   let Wchat = gpt#widget#GenericWidget("Chat")
 
   function Wchat.register_streaming_callback(callback) abort
-      let self.callback = a:callback
+    let self.callback = a:callback
   endfunction
 
   function Wchat.assist_get_chunk() abort
@@ -50,12 +50,11 @@ function s:gpt_chat_build() abort
   endfunction
 
   function Wchat.set_stream_id(id) abort
-    return  setbufvar(self.bufnr, "timer_id", a:id)
+    return  self.setvar("timer_id", a:id)
   endfunction
 
-  function Wchat.timer_start() abort
-    let l:timer_id = timer_start(10, self.callback, {'repeat': -1})
-    call self.set_stream_id(l:timer_id)
+  function Wchat.get_stream_id() abort
+    return  self.getvar("timer_id")
   endfunction
 
   function Wchat.stream_init() abort
@@ -68,9 +67,17 @@ function s:gpt_chat_build() abort
     call gpt#utils#switchwin(cur_bnr)
   endfunction
 
+  function Wchat.stream_stop() abort
+    call timer_stop(self.get_stream_id())
+  endfunction
+
   function Wchat.stream_start() abort
+    if (empty(self.callback))
+      throw "No callback registered"
+    endif
     call self.stream_init()
-    call self.timer_start()
+    let l:timer_id = timer_start(10, self.callback, {'repeat': -1})
+    call self.set_stream_id(l:timer_id)
   endfunction
 
   function Wchat.prepare() abort
@@ -94,15 +101,15 @@ function s:gpt_chat_build() abort
   endfunction
 
   function Wchat.get_summary() abort
-      return self.getvar("summary")
+    return self.getvar("summary")
   endfunction
 
   function Wchat.set_summary(summary) abort
-      return self.setvar("summary", a:summary)
+    return self.setvar("summary", a:summary)
   endfunction
 
   function Wchat.close() abort
-      call self.hide()
+    call self.hide()
   endfunction
 
   function Wchat.reset() abort
@@ -114,3 +121,5 @@ function s:gpt_chat_build() abort
   return Wchat
 
 endfunction
+
+"" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
