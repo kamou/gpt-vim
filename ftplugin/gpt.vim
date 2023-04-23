@@ -4,15 +4,13 @@ runtime! ftplugin/markdown.vim
 set scrolloff=999
 augroup gpt
     autocmd!
-    " autocmd OptionSet * if &filetype == 'gpt' | set syntax=markdown | endif
-    autocmd BufEnter,BufLeave GPT\ * set wrap
-    autocmd BufEnter,BufLeave GPT\ * set nonumber
-    autocmd BufEnter,BufLeave GPT\ * set norelativenumber
-    autocmd BufEnter,BufLeave GPT\ * set nomodifiable
-    autocmd BufEnter,BufLeave GPT\ * set nocursorline
-    autocmd BufEnter,BufLeave GPT\ * set nocursorcolumn
-    autocmd VimLeave GPT\ Log  call gpt#terminate()
-    autocmd VimLeave GPT\ Chat  call gpt#terminate()
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set wrap | endif
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nonumber | endif
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set norelativenumber | endif
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nomodifiable | endif
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nocursorline | endif
+  autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | set nocursorcolumn | endif
+  autocmd VimLeave * call gpt#terminate()
 augroup END
 
 " Define new key mappings
