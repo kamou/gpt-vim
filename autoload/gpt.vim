@@ -35,7 +35,7 @@ function gpt#assist(...) range abort
   endif
 
   " Perform the request
-  python3 gpt.last_response = gpt.assistant.user_say(vim.eval("l:prompt"), stream=True)
+  call Wchat.UserSay(l:prompt)
 
   let l:content = "\n\n" . gpt#utils#build_header("User")
   let l:content = l:content . l:prompt ."\n\n"
@@ -51,6 +51,7 @@ function gpt#visual_assist(...) range
   let l:selection = gpt#utils#visual_selection()
   call gpt#assist(l:selection)
 endfunction
+
 
 function s:timer_cb(id) abort
   let Wchat = gpt#widget#get("Chat")
@@ -95,9 +96,9 @@ function s:timer_cb(id) abort
       return v:false
     endif
 
-    " too many tokens, freeing a few tokens by memory loss. send will delete last
+    " too many tokens, freeing a few tokens by memory loss. Replay will delete last
     " memory if not enought tokens are available
-    python3 gpt.last_response = gpt.assistant.send(stream=True)
+    call Wchat.AssistReplay()
 
   endif
   call timer_pause(a:id, 0)

@@ -2,8 +2,13 @@
 function gpt#chat#register(callback) abort
   let Wchat = gpt#widget#get("Chat")
   if (empty(Wchat))
-    let Wchat = gpt#widget#GenericWidget("Chat")
+
+    let l:lang = getbufvar(bufnr('%'), "&filetype")
+    let l:lang = l:lang && (l:lang != "help") ? l:lang : "lang_name"
+    let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
+    let Wchat = gpt#widget#GenericWidget("Chat", l:context)
     let Wchat = Wchat->extend({
+          \ "task":     gpt#task#create("Chat", l:context),
           \ "callback": v:null,
           \ "lang":     v:null,
           \
@@ -15,17 +20,18 @@ function gpt#chat#register(callback) abort
           \ "GetSummary":           function('gpt#chat#GetSummary'),
           \ "SetSummary":           function('gpt#chat#SetSummary'),
           \ "StreamInit":           function('gpt#chat#StreamInit'),
-          \ "AssistInit":           function('gpt#chat#AssistInit'),
           \ "StreamStop":           function('gpt#chat#StreamStop'),
           \ "StreamStart":          function('gpt#chat#StreamStart'),
           \ "IsStreaming":          function('gpt#chat#IsStreaming'),
           \ "GetStreamId":          function('gpt#chat#GetStreamId'),
           \ "SetStreamId":          function('gpt#chat#SetStreamId'),
+          \ "AssistReplay" :        function('gpt#chat#AssistReplay'),
           \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
           \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
           \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
           \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
           \ })
+    let Wchat.task.config.stream = v:true
     call Wchat.SetAutoFocus(v:false)
     call Wchat.SetStreamingCallback(a:callback)
     call setbufvar(Wchat.bufnr, "&filetype", "gpt")
@@ -39,7 +45,7 @@ function gpt#chat#register(callback) abort
 endfunction
 
 function gpt#chat#Reset() abort dict
-  python3 gpt.assistant.reset()
+  call self.task.Reset()
   call self.DeleteLines(1, '$')
   call self.SetVar("summary", v:null)
 endfunction
@@ -49,23 +55,18 @@ function gpt#chat#GetLang() abort dict
 endfunction
 
 function gpt#chat#SetLang(lang) abort dict
-  let self.lang = a:lang
+  if a:lang != self.lang && !empty(a:lang) && a:lang != "help"
+    call self.task.SystemSay("The user have switched to a new " .. a:lang .. " file. Unless asked otherwise, from now on, the genered code should be in " .. a:lang .. ". Do not forget to fence multiline code with ```" ..a:lang .. ".")
+    let self.lang = a:lang
+  endif
 endfunction
 
 function gpt#chat#UserSay(prompt) abort dict
-  python3 gpt.last_response = gpt.assistant.user_say(vim.eval("a:prompt"), stream=True)
+  call self.task.UserSay(a:prompt)
 endfunction
 
 function gpt#chat#Prepare() abort dict
-
-  let b:lang = self.GetLang()
-  if !empty(b:lang)
-    let l:context = "You: " . b:lang . " assistant, Your task: generate valid " . b:lang . " code. Answers: markdown formatted. Multiline " . b:lang . " code should always be properly fenced like this:\n```". b:lang ."\n// your code goes here\n```\nAvoid useless details."
-  else
-    let l:context = "The user will ask you to generate code. Before generating code, Explain in details what steps need to be done in order to achieve the final result"
-  endif
-  call self.AssistInit(l:context)
-
+  let l:lang = self.GetLang()
   " Update DB if needed
   call py3eval("gpt.check_and_update_db(vim.eval('g:gpt#plugin_dir'))")
 endfunction
@@ -88,12 +89,12 @@ function gpt#chat#StreamInit() abort dict
   call gpt#utils#switchwin(cur_bnr)
 endfunction
 
-function gpt#chat#AssistInit(context) abort dict
-  python3 gpt.GptInitSession()
-endfunction
-
 function gpt#chat#StreamStop() abort dict
   call timer_stop(self.GetStreamId())
+endfunction
+
+function gpt#chat#AssistReplay() abort dict
+  call self.task.Replay()
 endfunction
 
 function gpt#chat#StreamStart() abort dict
@@ -118,11 +119,11 @@ function gpt#chat#SetStreamId(id) abort dict
 endfunction
 
 function gpt#chat#AssistUpdate(message) abort dict
-  python3 gpt.GptUpdate()
+  call self.task.Update(a:message)
 endfunction
 
 function gpt#chat#GetNextChunk() abort dict
-  return py3eval("gpt.GptGetNextChunk()")
+  return self.task.GetNextChunk()
 endfunction
 
 function gpt#chat#GetLastAnswer() abort dict
@@ -134,3 +135,4 @@ endfunction
 function gpt#chat#SetStreamingCallback(callback) abort dict
   let self.callback = a:callback
 endfunction
+" vim: ft=vim sw=2 foldmethod=marker foldlevel=0

@@ -5,16 +5,25 @@ import tiktoken
 import sqlite3
 openai.api_key = vim.eval("g:gpt_api_key")
 
+GPT_TASKS = dict()
+
+# TODO: clean this wild mess
+# - a class for the DB
+# - a class for TaskManager
+# - an interface for vim
+# - split in multiple modules
+
 class Assistant(object):
-    def __init__(self, memory = 1, context = None, model ="gpt-3.5-turbo"):
-        self.memory = memory
+    def __init__(self, context = None, model ="gpt-3.5-turbo"):
         self.history = list()
+        self.full_history = list()
         self.model = model
         self.context = context
+        self.response = None
 
     def remaining_tokens(self, max_tokens):
         enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        messages = self.history[-self.memory:]
+        messages = self.history
         tokens = 0
 
         if self.context:
@@ -24,6 +33,8 @@ class Assistant(object):
             tokens += len(enc.encode(msg["content"])) + 4
             if msg["role"] == "assistant":
                 tokens += 2
+            elif msg["role"] == "system":
+                tokens += 3
         tokens += 5
         return (max_tokens - tokens)
 
@@ -31,25 +42,34 @@ class Assistant(object):
     def send(self, n=1, max_tokens=4096, stream=False, temperature=0.7, **kwargs):
         if kwargs:
             self.history.append(kwargs)
+            self.full_history.append(kwargs)
 
-        while ((remaining_tokens := self.remaining_tokens(max_tokens)) < 1000):
+        while ((remaining_tokens := self.remaining_tokens(int(max_tokens))) < 1000):
             del self.history[0]
 
-        messages = self.history[-self.memory:]
+        messages = self.history
         if self.context:
             messages = [{"role": "system", "content": self.context }] + messages
 
-        return openai.ChatCompletion.create(
+        a = [ "False", "True"]
+        if stream in a:
+            stream = bool(a.index(stream))
+
+        self.response = openai.ChatCompletion.create(
             model=self.model,
             messages=messages,
             n=n,
             stream=stream,
-            temperature=temperature,
-            max_tokens=int((remaining_tokens)/n)
+            temperature=float(temperature),
+            max_tokens=int((remaining_tokens)/n) - 1
         )
+        return self.response
 
     def user_say(self, message: str, **kwargs):
         return self.send(role = "user", content=message, **kwargs)
+
+    def system_say(self, message: str, **kwargs):
+        self.history.append({"role": "system", "content": message})
 
     def assistant_say(self, message: str):
         return self.send(role = "assistant", content=message)
@@ -61,24 +81,61 @@ class Assistant(object):
     def reset(self):
         self.history = []
 
+    def get_next_chunk(self):
+        return next(self.response)
 
-def GptGetNextChunk():
-    return next(last_response)['choices'][0]
 
 def GptUpdate():
     global assistant
     message = vim.eval("a:message")
-    assistant.update(message)
-    open("history.json", "w").write(str(assistant.history))
+    task = GPT_TASKS[vim.eval("self.name")]
+    task.update(message)
+    open("history.json", "w").write(str(task.history))
 
-
-def GptInitSession():
+def GptReplay():
     global assistant
-    context = vim.eval("a:context")
-    if assistant == None:
-        assistant =  Assistant(memory=0, context=context)
+    message = vim.eval("a:message")
+    task = GPT_TASKS[vim.eval("self.name")]
+    task.send(message)
+
+def GptCreateTask():
+    name = vim.eval("self.name")
+    GPT_TASKS[vim.eval("self.name")] = Assistant(context=vim.eval("self.context"))
+
+def GptUserSay():
+    name = vim.eval("self.name")
+    task = GPT_TASKS[vim.eval("self.name")]
+
+    config = vim.eval("self.config")
+    for key in config:
+        config[key] = vim.eval(f"self.config.{key}")
+    config = config if config else {}
+    ret = task.user_say(vim.eval("a:message"), **config)
+    if (not vim.eval("self.config['stream']")):
+        return ret
     else:
-        assistant.context = context
+        return None
+
+def GptSystemSay():
+    name = vim.eval("self.name")
+    task = GPT_TASKS[vim.eval("self.name")]
+
+    config = vim.eval("self.config")
+    config = config if config else {}
+
+    ret = task.system_say(vim.eval("a:message"), **config)
+    if (not vim.eval("self.config['stream']")):
+        return ret
+    else:
+        return None
+
+def GptReset():
+    task = GPT_TASKS[vim.eval("self.name")]
+    task.reset()
+
+def GptGetNextChunk():
+    task = GPT_TASKS[vim.eval("self.name")]
+    return task.get_next_chunk()["choices"][0]
 
 def create_options():
     options = [
@@ -128,12 +185,12 @@ def set_conversation(path, summary):
     global assistant
     conv = get_conversation(path, summary)
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
-    assistant.history = conv
+    GPT_TASKS["Chat"].history = conv
 
 def gen_summary():
-    assist = Assistant(context="in no more than five words, describe the topic of the following conversation")
+    assist = Assistant(context="in no more than five words, provide a meaningful description of the topic for the following conversation.")
 
-    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in assistant.history ]
+    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in GPT_TASKS["Chat"].history if message["role"] != "system"] 
 
     messages = "==========".join(messages)
     response = assist.user_say(messages + "\n\ndescribe the main topic of this conversation in 5 words")
@@ -185,7 +242,7 @@ def replace_conversation(summary, path):
         version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
     );
     '''
-    message = assistant.history
+    message = GPT_TASKS["Chat"].history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
@@ -200,7 +257,7 @@ def replace_conversation(summary, path):
     connection.commit()
 
     # Insert the new messages
-    messages = assistant.history
+    messages = GPT_TASKS["Chat"].history
     for message in messages:
         role = message['role']
         content = message['content']
@@ -260,7 +317,7 @@ def save_conversation(path, summary=None, messages=None):
         summary = gen_summary().strip()
 
     if not messages:
-        messages = assistant.history
+        messages = GPT_TASKS["Chat"].full_history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
@@ -342,4 +399,3 @@ def extract_conversations_v1(path):
     return conversations_dict
 
 
-assistant = None
