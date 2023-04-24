@@ -87,14 +87,12 @@ class Assistant(object):
 
 
 def GptUpdate():
-    global assistant
     message = vim.eval("a:message")
     task = GPT_TASKS[vim.eval("self.name")]
     task.update(message)
     open("history.json", "w").write(str(task.history))
 
 def GptReplay():
-    global assistant
     task = GPT_TASKS[vim.eval("self.name")]
     task.send()
 
@@ -182,7 +180,6 @@ def get_summary_list(path):
     return summaries
 
 def set_conversation(path, summary):
-    global assistant
     conv = get_conversation(path, summary)
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
     GPT_TASKS["Chat"].full_history = conv
