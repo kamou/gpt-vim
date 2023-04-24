@@ -33,10 +33,10 @@ INSTALLATION                                           *gptvim-installation*
 
 In order to install GPT-Vim, perform the following steps:
 
-* Install the 'tiktok', 'openai', and 'sqlite3' Python modules by running:
+* Install the 'tiktoken', 'openai', and 'sqlite3' Python modules by running:
 
     ```vim
-    pip install tiktok openai sqlite3
+    pip install tiktoken openai sqlite3
     ```
 
 * Install the GPT-Vim plugin using your preferred plugin manager. For example,
