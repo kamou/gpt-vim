@@ -335,6 +335,9 @@ def save_conversation(path, summary=None, messages=None):
         insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
         cursor.execute(insert_query, (summary, role, content))
         connection.commit()
+
+    replace_query = f"INSERT OR REPLACE INTO version (version) VALUES (?);"
+    cursor.execute(replace_query, (2,))
     connection.close()
 
 
