@@ -340,7 +340,7 @@ def save_conversation(path, summary=None, messages=None):
 
 def check_and_update_db(path):
     database_name = os.path.join(path,'history.db')
-    if get_version_number(path) == 1:
+    if os.path.isfile(database_name) and get_version_number(path) == 1:
         print("Updating conversation database to v2")
         conversations = extract_conversations_v1(path)
         os.remove(database_name)
@@ -348,7 +348,7 @@ def check_and_update_db(path):
             summary = conv["summary"]
             messages = [ { "role": message[2], "content": message[3] } for message in conv["messages"] ]
             save_conversation(path, summary, messages)
-    set_version_number(path, 2)
+        set_version_number(path, 2)
 
 def get_version_number(path):
     database_name = os.path.join(path,'history.db')
