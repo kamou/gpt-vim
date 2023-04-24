@@ -3,6 +3,8 @@ import vim
 import openai
 import tiktoken
 import sqlite3
+import gptdb
+import shutil
 openai.api_key = vim.eval("g:gpt_api_key")
 
 GPT_TASKS = dict()
@@ -12,6 +14,9 @@ GPT_TASKS = dict()
 # - a class for TaskManager
 # - an interface for vim
 # - split in multiple modules
+
+
+
 
 class Assistant(object):
     def __init__(self, context = None, model ="gpt-3.5-turbo"):
@@ -109,7 +114,8 @@ def GptUserSay():
         config[key] = vim.eval(f"self.config.{key}")
     config = config if config else {}
     ret = task.user_say(vim.eval("a:message"), **config)
-    if (not vim.eval("self.config['stream']")):
+    stream = vim.eval("self.config['stream']")
+    if (not stream) or stream == 'False':
         return ret
     else:
         return None
@@ -135,6 +141,16 @@ def GptGetNextChunk():
     task = GPT_TASKS[vim.eval("self.name")]
     return task.get_next_chunk()["choices"][0]
 
+def GptSetMessages():
+    messages = vim.eval("a:messages")
+    task = GPT_TASKS[vim.eval("self.name")]
+    task.history = messages
+    task.full_history = messages
+
+def GptGetMessages():
+    task = GPT_TASKS[vim.eval("self.name")]
+    return task.full_history
+
 def create_options():
     options = [
         "temperature [ 1.0 ]",
@@ -150,207 +166,20 @@ def create_options():
     buf.options["syntax"] = "markdown"
     vim.api.buf_set_lines(buf, 0, 0, True,  options)
 
-def OpenOptions():
-    create_options()
-
-def get_summary_list(path):
-    database_name = os.path.join(path,'history.db')
-    table_name = 'conversations'
-    connection = sqlite3.connect(database_name)
-    connection.execute("PRAGMA foreign_keys = 1")
-
-    cursor = connection.cursor()
-
-    # Check if the conversations table exists
-    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
-    result = cursor.fetchone()
-    if result is None:
-        return []
-
-    select_query = f"SELECT summary FROM {table_name};"
-    cursor.execute(select_query)
-    results = cursor.fetchall()
-
-    # Extract the summary values from the results
-    summaries = [result[0] for result in results]
-
-    connection.close()
-    summaries = [ f" [{i + 1}] {summary}" for i, summary in enumerate(summaries) ]
-    summaries.reverse()
-    return summaries
-
-def set_conversation(path, summary):
-    conv = get_conversation(path, summary)
-    conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
-    GPT_TASKS["Chat"].full_history = conv
-
-def gen_summary():
-    assist = Assistant(context="in no more than five words, provide a meaningful description of the topic for the following conversation.")
-
-    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in GPT_TASKS["Chat"].full_history if message["role"] != "system"] 
-
-    messages = "==========".join(messages)
-    response = assist.user_say(messages + "\n\ndescribe the main topic of this conversation in 5 words")
-    return response["choices"][0]["message"]["content"]
-
-
-def get_conversation(path, summary):
-    # Define the database name and table names
-    database_name = os.path.join(path, 'history.db')
-    messages_table_name = 'messages'
-
-    # Connect to the database and execute the query
-    connection = sqlite3.connect(database_name)
-    connection.execute("PRAGMA foreign_keys = 1")
-
-    cursor = connection.cursor()
-    select_query = f"SELECT id, role, content FROM {messages_table_name} WHERE conversation_summary = ?;"
-    cursor.execute(select_query, (summary,))
-    results = cursor.fetchall()
-
-    # Create a list of messages from the results
-    messages = [{'id': result[0], 'role': result[1], 'content': result[2]} for result in results]
-
-    # Close the database connection
-    connection.close()
-
-    return messages
-
-def replace_conversation(summary, path):
-    # Define the database name and table names
-    database_name = os.path.join(path,'history.db')
-    messages_table_name = 'messages'
-
-    # Define the schema for the tables
-    schema = '''
-    CREATE TABLE IF NOT EXISTS conversations (
-        summary TEXT PRIMARY KEY
-    );
-
-    CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_summary TEXT,
-        role TEXT,
-        content TEXT,
-        FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS version (
-        version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
-    );
-    '''
-    message = GPT_TASKS["Chat"].full_history
-
-    # Connect to the database and create the tables
-    connection = sqlite3.connect(database_name)
-    connection.execute("PRAGMA foreign_keys = 1")
-
-    cursor = connection.cursor()
-    cursor.executescript(schema)
-    connection.commit()
-
-    # Remove all messages for the conversation
-    cursor.execute(f"DELETE FROM {messages_table_name} WHERE conversation_summary=?", (summary,))
-    connection.commit()
-
-    # Insert the new messages
-    messages = GPT_TASKS["Chat"].full_history
-    for message in messages:
-        role = message['role']
-        content = message['content']
-        insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
-        cursor.execute(insert_query, (summary, role, content))
-        connection.commit()
-
-    # Close the database connection
-    connection.close()
-
-def delete_conversation(path, summary):
-    # Define the database name and table names
-    database_name = os.path.join(path,'history.db')
-    table_name = 'conversations'
-    messages_table_name = 'messages'
-
-    # Connect to the database and delete the conversation and its messages
-    connection = sqlite3.connect(database_name)
-    connection.execute("PRAGMA foreign_keys = 1")
-
-    cursor = connection.cursor()
-    cursor.execute(f"DELETE FROM {table_name} WHERE summary=?", (summary,))
-    connection.commit()
-    cursor.execute(f"DELETE FROM {messages_table_name} WHERE conversation_summary=?", (summary,))
-    connection.commit()
-
-    # Close the database connection
-    connection.close()
-
-
-def save_conversation(path, summary=None, messages=None):
-    database_name = os.path.join(path,'history.db')
-    # Define the database name and table names
-    table_name = 'conversations'
-    messages_table_name = 'messages'
-
-    # Define the schema for the tables
-    schema = '''
-    CREATE TABLE IF NOT EXISTS conversations (
-        summary TEXT PRIMARY KEY
-    );
-
-    CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_summary TEXT,
-        role TEXT,
-        content TEXT,
-        FOREIGN KEY (conversation_summary) REFERENCES conversations(summary) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS version (
-        version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
-    );
-
-    '''
-    if not summary:
-        summary = gen_summary().strip()
-
-    if not messages:
-        messages = GPT_TASKS["Chat"].full_history
-
-    # Connect to the database and create the tables
-    connection = sqlite3.connect(database_name)
-    connection.execute("PRAGMA foreign_keys = 1")
-
-    cursor = connection.cursor()
-    cursor.executescript(schema)
-    connection.commit()
-
-    insert_query = f"INSERT OR IGNORE INTO {table_name} (summary) VALUES (?);"
-    cursor.execute(insert_query, (summary,))
-    connection.commit()
-    for message in messages:
-        role = message['role']
-        content = message['content']
-        insert_query = f"INSERT INTO {messages_table_name} (conversation_summary, role, content) VALUES (?, ?, ?);"
-        cursor.execute(insert_query, (summary, role, content))
-        connection.commit()
-
-    replace_query = f"INSERT OR REPLACE INTO version (version) VALUES (?);"
-    cursor.execute(replace_query, (2,))
-    connection.commit()
-    connection.close()
-
-
 def check_and_update_db(path):
-    database_name = os.path.join(path,'history.db')
-    if os.path.isfile(database_name) and get_version_number(path) == 1:
+    db = gptdb.GPTDataBase(path)
+    if os.path.isfile(path) and db.get_version() == 1:
+        newdb = gptdb.GPTDataBase(path + ".new")
         print("Updating conversation database to v2")
-        conversations = extract_conversations_v1(path)
-        os.remove(database_name)
+        conversations = db.extract_v1()
+        del db
+        os.remove(path)
         for conv in conversations:
             summary = conv["summary"]
             messages = [ { "role": message[2], "content": message[3] } for message in conv["messages"] ]
-            save_conversation(path, summary, messages)
-        set_version_number(path, 2)
+            newdb.save(summary, messages)
+        shutil.move(path + ".new", path)
+        del newdb
 
 def get_version_number(path):
     database_name = os.path.join(path,'history.db')
@@ -358,7 +187,7 @@ def get_version_number(path):
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT version FROM version')
-    except sqlite3.OperationalError as e:
+    except sqlite3.OperationalError:
         return 1
 
     version_number = cursor.fetchone()
@@ -366,37 +195,52 @@ def get_version_number(path):
 
     return version_number
 
-def set_version_number(path, version_number):
-    database_name = os.path.join(path, 'history.db')
-    conn = sqlite3.connect(database_name)
-    cursor = conn.cursor()
-    replace_query = f"INSERT OR REPLACE INTO version (version) VALUES (?);"
-    cursor.execute(replace_query, (version_number,))
-    conn.commit()
-    conn.close()
+def GptDBSave():
+    path = vim.eval("self.path")
+    summary = vim.eval("a:summary")
+    messages = vim.eval("a:messages")
 
-def extract_conversations_v1(path):
-    database_name = os.path.join(path,'history.db')
-    # Define the database name and table names
-    table_name = 'conversations'
-    messages_table_name = 'messages'
+    db = gptdb.GPTDataBase(path)
+    db.save(summary, messages)
 
-    # Connect to the database and retrieve the conversations
-    connection = sqlite3.connect(database_name)
-    cursor = connection.cursor()
-    cursor.execute(f"SELECT * FROM {table_name}")
-    conversations = cursor.fetchall()
+def GptDBUpdate():
+    path = vim.eval("self.path")
+    summary = vim.eval("a:summary")
+    messages = vim.eval("a:messages")
 
-    # Create a dictionary to hold the conversations and their messages
-    conversations_dict = list()
-    for conversation in conversations:
-        conversation_id = conversation[0]
-        summary = conversation[1]
-        cursor.execute(f"SELECT * FROM {messages_table_name} WHERE my_table_id=?", (conversation_id,))
-        messages = cursor.fetchall()
-        conversations_dict.append({'summary': summary, 'messages': messages})
+    db = gptdb.GPTDataBase(path)
+    db.update(summary, messages)
 
-    connection.close()
-    return conversations_dict
+def GptDBDelete():
+    path = vim.eval("self.path")
+    summary = vim.eval("a:summary")
+
+    db = gptdb.GPTDataBase(path)
+    db.delete(summary)
+
+def GptDBGet():
+    path = vim.eval("self.path")
+    summary = vim.eval("a:summary")
+
+    db = gptdb.GPTDataBase(path)
+    return db.get(summary)
+
+def GptDBList():
+    path = vim.eval("self.path")
+
+    db = gptdb.GPTDataBase(path)
+    return db.list()
+
+def GptDBGetVers():
+    path = vim.eval("self.path")
+
+    db = gptdb.GPTDataBase(path)
+    return db.get_version()
+
+def GptDBSetVers():
+    path = vim.eval("self.path")
+    version = vim.eval("a:version")
 
 
+    db = gptdb.GPTDataBase(path)
+    return db.set_version(version)

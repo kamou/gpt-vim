@@ -68,7 +68,7 @@ endfunction
 function gpt#chat#Prepare() abort dict
   let l:lang = self.GetLang()
   " Update DB if needed
-  call py3eval("gpt.check_and_update_db(vim.eval('g:gpt#plugin_dir'))")
+  call py3eval("gpt.check_and_update_db(vim.eval('g:gpt#plugin_dir') + '/history.db')")
 endfunction
 
 function gpt#chat#GetSummary() abort dict

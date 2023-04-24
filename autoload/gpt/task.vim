@@ -16,6 +16,8 @@ function gpt#task#create(name, context) abort
         \ "SystemSay":   function('gpt#task#SystemSay'),
         \ "Reset":       function('gpt#task#Reset'),
         \ "SetConfig":   function('gpt#task#SetConfig'),
+        \ "GetMessages": function('gpt#task#GetMessages'),
+        \ "SetMessages": function('gpt#task#SetMessages'),
         \ "GetNextChunk":function('gpt#task#GetNextChunk'),
   \ }
   call task.Init()
@@ -44,6 +46,14 @@ endfunction
 
 function gpt#task#Reset() dict
   return py3eval("gpt.GptReset()")
+endfunction
+
+function gpt#task#GetMessages() dict
+  return py3eval("gpt.GptGetMessages()")
+endfunction
+
+function gpt#task#SetMessages(messages) dict
+  return py3eval("gpt.GptSetMessages()")
 endfunction
 
 function gpt#task#SetConfig(config) dict

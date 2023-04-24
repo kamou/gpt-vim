@@ -5,6 +5,8 @@ function gpt#sessions#register()
   if empty(Wconv)
     let Wconv = gpt#widget#GenericWidget(l:name)
     let Wconv = Wconv->extend({
+          \ "summarizer":           gpt#summarizer#create(),
+          \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
           \ "List":                 function('gpt#sessions#List'),
           \ "Save":                 function('gpt#sessions#Save'),
           \ "Select":               function('gpt#sessions#Select'),
@@ -24,7 +26,7 @@ function gpt#sessions#register()
 endfunction
 
 function gpt#sessions#GetSummaries() dict
-  return pyeval("gpt.get_summary_list(vim.eval(\"g:gpt#plugin_dir\"))")
+  return self.db.List()
 endfunction
 
 function gpt#sessions#UpdateList(summaries) dict
@@ -47,22 +49,30 @@ function gpt#sessions#List() dict
 endfun
 
 function gpt#sessions#SaveConv() dict
-  if pyeval("len(gpt.GPT_TASKS['Chat'].full_history)")
-    python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
-    return pyeval("gpt.gen_summary()")
+  let Wchat =  gpt#widget#get("Chat")
+  let l:messages = Wchat.task.GetMessages()
+
+  if !empty(l:messages)
+    let summary = self.summarizer.Gen(l:messages)
+    return self.db.Save(summary, messages)
   endif
   return v:null
 endfunction
 
 function gpt#sessions#UpdateConv(summary) dict
-  python3 gpt.replace_conversation(vim.eval("a:summary"), vim.eval("g:gpt#plugin_dir"))
+  let Wchat =  gpt#widget#get("Chat")
+  let l:messages = Wchat.task.GetMessages()
+  call self.db.Update(a:summary, l:messages)
 endfunction
 
 function gpt#sessions#Save() dict
   let Wchat =  gpt#widget#get("Chat")
   let summary =  Wchat.GetSummary()
   if empty(summary)
-    call Wchat.SetSummary(self.SaveConv())
+    let l:messages = Wchat.task.GetMessages()
+    let summary = self.summarizer.Gen(l:messages)
+    call self.SaveConv()
+    call Wchat.SetSummary(summary)
   else
     call self.UpdateConv(summary)
   endif
@@ -71,7 +81,7 @@ endfunction
 fun! gpt#sessions#Select() dict
   let Wchat = gpt#widget#get("Chat")
   let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
-  let l:messages = pyeval("gpt.get_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:summary\"))")
+  let l:messages = Wchat.task.GetMessages()
 
   let l:content = ""
   for message in l:messages
@@ -95,7 +105,9 @@ fun! gpt#sessions#Select() dict
   endfor
   call Wchat.SetVar("&modifiable", v:false)
 
-  python3 gpt.set_conversation(vim.eval("g:gpt#plugin_dir"), vim.eval("l:summary"))
+  let l:messages = self.db.Get(l:summary)
+  call Wchat.task.SetMessages(l:messages)
+
   let s:session_buffer = v:null
 
   call self.Hide()
@@ -104,7 +116,7 @@ endfun
 
 function gpt#sessions#Delete() dict
   let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
-  call pyeval("gpt.delete_conversation(vim.eval(\"g:gpt#plugin_dir\"), vim.eval(\"l:summary\"))")
+  call self.cb.Delete(summary)
   let summaries = self.GetSummaries()
   let closeit = empty(summaries)
 
