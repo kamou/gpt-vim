@@ -336,6 +336,7 @@ def save_conversation(path, summary=None, messages=None):
 
     replace_query = f"INSERT OR REPLACE INTO version (version) VALUES (?);"
     cursor.execute(replace_query, (2,))
+    connection.commit()
     connection.close()
 
 
@@ -360,7 +361,7 @@ def get_version_number(path):
     except sqlite3.OperationalError as e:
         return 1
 
-    version_number = cursor.fetchone()[0]
+    version_number = cursor.fetchone()
     conn.close()
 
     return version_number
