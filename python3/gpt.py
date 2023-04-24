@@ -77,6 +77,7 @@ class Assistant(object):
     # mainly used to store Assistant answers
     def update(self, message: dict):
         self.history.append(message)
+        self.full_history.append(message)
 
     def reset(self):
         self.history = []
@@ -184,12 +185,12 @@ def set_conversation(path, summary):
     global assistant
     conv = get_conversation(path, summary)
     conv = [ { "role": msg["role"], "content": msg["content"] } for msg in conv ]
-    GPT_TASKS["Chat"].history = conv
+    GPT_TASKS["Chat"].full_history = conv
 
 def gen_summary():
     assist = Assistant(context="in no more than five words, provide a meaningful description of the topic for the following conversation.")
 
-    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in GPT_TASKS["Chat"].history if message["role"] != "system"] 
+    messages = [ f"{message['role']}:\n\n {message['content']}\n\n" for message in GPT_TASKS["Chat"].full_history if message["role"] != "system"] 
 
     messages = "==========".join(messages)
     response = assist.user_say(messages + "\n\ndescribe the main topic of this conversation in 5 words")
@@ -241,7 +242,7 @@ def replace_conversation(summary, path):
         version INTEGER PRIMARY KEY NOT NULL DEFAULT 2
     );
     '''
-    message = GPT_TASKS["Chat"].history
+    message = GPT_TASKS["Chat"].full_history
 
     # Connect to the database and create the tables
     connection = sqlite3.connect(database_name)
@@ -256,7 +257,7 @@ def replace_conversation(summary, path):
     connection.commit()
 
     # Insert the new messages
-    messages = GPT_TASKS["Chat"].history
+    messages = GPT_TASKS["Chat"].full_history
     for message in messages:
         role = message['role']
         content = message['content']
