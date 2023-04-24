@@ -47,7 +47,7 @@ function gpt#sessions#List() dict
 endfun
 
 function gpt#sessions#SaveConv() dict
-  if pyeval("len(gpt.assistant.history)")
+  if pyeval("len(gpt.GPT_TASKS['Chat'].full_history)")
     python3 gpt.save_conversation(vim.eval("g:gpt#plugin_dir"))
     return pyeval("gpt.gen_summary()")
   endif
