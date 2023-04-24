@@ -19,7 +19,6 @@ function gpt#summarizer#Gen(messages) dict abort
                         \ "==========\n\n"
         endif
     endfor
-    echo "gen this:\n".. l:messages
     return self.task.UserSay(l:messages)["choices"][0]["message"]["content"]
 endfunction
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0
