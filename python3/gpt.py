@@ -6,6 +6,8 @@ import sqlite3
 import gptdb
 import shutil
 import sys
+import json
+
 openai.api_key = vim.eval("g:gpt_api_key")
 
 GPT_TASKS = dict()
@@ -96,14 +98,8 @@ class Assistant(object):
 
 # seems like vim.eva() is not recursively evaluating dictionaries.
 # let's fix that here
-def parse_config(config):
-    for k, v in config.items():
-        if k == "stream":
-            config[k] = bool(["False", "True"].index(v))
-        if k == "logit_bias":
-            for lbk in v:
-                v[lbk] = int(v[lbk])
-    return config
+def get_config(config):
+    return json.loads(vim.eval(f"json_encode({config})"))
 
 
 def GptUpdate():
@@ -113,7 +109,7 @@ def GptUpdate():
 
 def GptReplay():
     name = vim.eval("self.name")
-    config = parse_config(vim.eval("self.config"))
+    config = get_config("self.config")
     task = GPT_TASKS[name]
     task.send(**config)
 
@@ -126,7 +122,7 @@ def GptUserSay():
     name = vim.eval("self.name")
     task = GPT_TASKS[name]
 
-    config = parse_config(vim.eval("self.config"))
+    config = get_config("self.config")
     ret = task.user_say(vim.eval("a:message"), **config)
 
     return None if config.get("stream", False) else ret
@@ -135,7 +131,7 @@ def GptSystemSay():
     name = vim.eval("self.name")
     task = GPT_TASKS[name]
 
-    config = parse_config(vim.eval("self.config"))
+    config = get_config("self.config")
     ret = task.system_say(vim.eval("a:message"), **config)
 
     return None if config.get("stream", False) else ret
