@@ -148,7 +148,7 @@ def GptGetNextChunk():
     task = GPT_TASKS[vim.eval("self.name")]
     chunk = task.get_next_chunk()
     if chunk and len(chunk.get("choices", [])):
-        return task.get_next_chunk()["choices"][0]
+        return chunk["choices"][0]
     return None
 
 def GptSetMessages():
