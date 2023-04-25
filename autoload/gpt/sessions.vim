@@ -81,7 +81,9 @@ endfunction
 fun! gpt#sessions#Select() dict
   let Wchat = gpt#widget#get("Chat")
   let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
-  let l:messages = Wchat.task.GetMessages()
+
+  let l:messages = self.db.Get(l:summary)
+  call Wchat.task.SetMessages(l:messages)
 
   let l:content = ""
   for message in l:messages
@@ -105,18 +107,13 @@ fun! gpt#sessions#Select() dict
   endfor
   call Wchat.SetVar("&modifiable", v:false)
 
-  let l:messages = self.db.Get(l:summary)
-  call Wchat.task.SetMessages(l:messages)
-
-  let s:session_buffer = v:null
-
   call self.Hide()
   call Wchat.Show()
 endfun
 
 function gpt#sessions#Delete() dict
   let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
-  call self.cb.Delete(summary)
+  call self.db.Delete(summary)
   let summaries = self.GetSummaries()
   let closeit = empty(summaries)
 

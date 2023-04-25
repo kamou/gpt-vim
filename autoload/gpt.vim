@@ -120,7 +120,7 @@ endfunction
 
 function gpt#terminate()
   let Wchat = gpt#widget#get("Chat")
-  if !Wchat.GetStreamId()->empty()
+  if !Wchat->empty() && !Wchat.GetStreamId()->empty()
     call timer_stop(Wchat.GetStreamId())
   endif
 endfunction

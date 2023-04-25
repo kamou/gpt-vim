@@ -25,7 +25,6 @@ class GPTDataBase(object):
             # create the database
             # Connect to the database and create the tables
             connection = sqlite3.connect(path)
-            connection.execute("PRAGMA foreign_keys = 1")
 
             cursor = connection.cursor()
             cursor.executescript(GPTDataBase.SCHEMA)
@@ -35,7 +34,6 @@ class GPTDataBase(object):
             connection.close()
 
         self.connection = sqlite3.connect(path)
-        self.connection.execute("PRAGMA foreign_keys = 1")
         self.cursor = self.connection.cursor()
 
     def list(self):

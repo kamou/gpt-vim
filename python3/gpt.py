@@ -88,6 +88,7 @@ class Assistant(object):
 
     def reset(self):
         self.history = []
+        self.full_history = []
 
     def get_next_chunk(self):
         try: return next(self.response)
@@ -128,7 +129,7 @@ def GptUserSay():
     config = parse_config(vim.eval("self.config"))
     ret = task.user_say(vim.eval("a:message"), **config)
 
-    return None if config["stream"] else ret
+    return None if config.get("stream", False) else ret
 
 def GptSystemSay():
     name = vim.eval("self.name")
@@ -137,7 +138,7 @@ def GptSystemSay():
     config = parse_config(vim.eval("self.config"))
     ret = task.system_say(vim.eval("a:message"), **config)
 
-    return None if config["stream"] else ret
+    return None if config.get("stream", False) else ret
 
 def GptReset():
     task = GPT_TASKS[vim.eval("self.name")]
@@ -145,7 +146,10 @@ def GptReset():
 
 def GptGetNextChunk():
     task = GPT_TASKS[vim.eval("self.name")]
-    return task.get_next_chunk()["choices"][0]
+    chunk = task.get_next_chunk()
+    if chunk and len(chunk.get("choices", [])):
+        return task.get_next_chunk()["choices"][0]
+    return None
 
 def GptSetMessages():
     messages = vim.eval("a:messages")
