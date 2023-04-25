@@ -15,10 +15,12 @@ function gpt#widget#GenericWidget(name, ...) abort
   endif
   let w = {
         \ 'size':             -1,
+        \ 'maps':             {},
         \ 'axis':             "auto",
         \ 'bufnr':            bufadd("GPT " .. a:name),
         \ 'autofocus':        v:true,
         \
+        \ 'Map':              function('gpt#widget#Map'),
         \ 'Hide':             function('gpt#widget#Hide'),
         \ 'Show':             function('gpt#widget#Show'),
         \ 'Resize':           function('gpt#widget#Resize'),
@@ -87,6 +89,17 @@ function gpt#widget#GenericWidget(name, ...) abort
 
 endfunction
 
+function gpt#widget#Map(mode, binding, command) dict
+  if !has_key(self.maps, a:mode)
+    let self.maps[a:mode] = {}
+  endif
+  if !has_key(self.maps[a:mode], a:binding)
+    let self.maps[a:mode][a:binding] = {}
+  endif
+
+  let self.maps[a:mode][a:binding] = a:command
+endfunction
+
 function gpt#widget#Hide() dict
   execute "hide " ..  "\"" .. bufname(self.bufnr) .. "\""
 endfunction
@@ -98,6 +111,11 @@ function gpt#widget#Show() dict
   if index(tabpage_buffers, self.bufnr) == -1
     execute self.GetAxis() .. " split " ..  bufname(self.bufnr)
     call self.Resize()
+    for mode in keys(self.maps)
+      for binding in keys(self.maps[mode])
+        execute mode .."map <silent> <buffer> " .. binding .. " " .. self.maps[mode][binding]
+      endfor
+    endfor
   endif
 
   if !self.autofocus

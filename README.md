@@ -52,11 +52,4 @@ You may update it in you .vimrc file.
   - `d` delete the session under the cursor
   - `Enter` select the session under the cursor
 
-
-## Bonus
-
-If you are using treesitter and neovim, add this to your init.lua for better syntax highlighting:
-```
-vim.treesitter.language.register("markdown", "gpt")
-```
 requires the markdown and markdown_inlines treesitter plugins

@@ -35,17 +35,27 @@ function gpt#chat#register(callback) abort
     let Wchat.task.config.stream = v:true
     call Wchat.SetAutoFocus(v:false)
     call Wchat.SetStreamingCallback(a:callback)
-    call setbufvar(Wchat.bufnr, "&filetype", "gpt")
+    call setbufvar(Wchat.bufnr, "&filetype", "markdown")
     call setbufvar(Wchat.bufnr, "&syntax", "markdown")
     call Wchat.SetStreamId(v:null)
     call Wchat.SetAxis("auto")
     call Wchat.SetSize(-1)
+    call Wchat.Map("n", "q", ":call gpt#widget#get('Chat').Hide()<CR>")
+    call Wchat.Map("n", "r", ":call gpt#widget#get('Chat').Reset()<CR>")
+    call Wchat.Map("n", "s", ":call gpt#widget#get('Conversations').Save()<CR>")
+    call Wchat.Map("n", "L", ":call gpt#widget#get('Conversations').List()<CR>")
     call Wchat.Prepare()
   endif
   return Wchat
 endfunction
 
 function gpt#chat#Reset() abort dict
+  call self.task.Reset()
+  call self.DeleteLines(1, '$')
+  call self.SetVar("summary", v:null)
+endfunction
+
+function gpt#chat#Cancel() abort dict
   call self.task.Reset()
   call self.DeleteLines(1, '$')
   call self.SetVar("summary", v:null)

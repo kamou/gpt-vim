@@ -21,6 +21,10 @@ function gpt#sessions#register()
     call Wconv.SetSize(40)
     call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
     call setbufvar(Wconv.bufnr, "&syntax", "markdown")
+
+    call Wconv.Map("n", "<CR>"      , ":call gpt#widget#get('Conversations').Select()<CR>")
+    call Wconv.Map("n", "<nowait> d", ":call gpt#widget#get('Conversations').Delete()<CR>")
+    call Wconv.Map("n", "q"         , ":call gpt#widget#get('Conversations').Hide()<CR>")
   endif
   return Wconv
 endfunction
