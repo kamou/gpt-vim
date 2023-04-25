@@ -44,7 +44,11 @@ function gpt#Assist(vmode) range abort
   endif
 
   " Perform the request
-  call Wchat.UserSay(l:prompt)
+  let answer = Wchat.UserSay(l:prompt)
+  if has_key(answer, "error")
+    echoerr "Message failed with error: " .. answer["error"]
+    return
+  endif
 
   let l:content = "\n\n" . gpt#utils#build_header("User")
   let l:content = l:content . l:prompt ."\n\n"

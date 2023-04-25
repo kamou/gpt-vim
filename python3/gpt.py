@@ -63,16 +63,12 @@ class Assistant(object):
         if self.context:
             messages = [{"role": "system", "content": self.context }] + messages
 
-        try:
-            self.response = openai.ChatCompletion.create(
-                messages=messages,
-                model=self.model,
-                **kwargs
-            )
-            return self.response
-        except openai.OpenAIError as e:
-            print (e.user_message, file=sys.stderr)
-            return None
+        self.response = openai.ChatCompletion.create(
+            messages=messages,
+            model=self.model,
+            **kwargs
+        )
+        return self.response
 
     def user_say(self, message: str, **kwargs):
         return self.send({"role": "user", "content": message}, **kwargs)
@@ -93,6 +89,9 @@ class Assistant(object):
         self.full_history = []
 
     def get_next_chunk(self):
+        if not self.response:
+            return None
+
         try: return next(self.response)
         except StopIteration as e: return None
 
@@ -123,9 +122,12 @@ def GptUserSay():
     task = GPT_TASKS[name]
 
     config = get_config("self.config")
-    ret = task.user_say(vim.eval("a:message"), **config)
+    try:
+        ret = task.user_say(vim.eval("a:message"), **config)
+    except openai.OpenAIError as e:
+        return {"error": e.user_message}
 
-    return None if config.get("stream", False) else ret
+    return {} if config.get("stream", False) else ret
 
 def GptSystemSay():
     name = vim.eval("self.name")
