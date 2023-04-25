@@ -5,6 +5,7 @@ import tiktoken
 import sqlite3
 import gptdb
 import shutil
+import sys
 openai.api_key = vim.eval("g:gpt_api_key")
 
 GPT_TASKS = dict()
@@ -44,34 +45,35 @@ class Assistant(object):
         return (max_tokens - tokens)
 
 
-    def send(self, n=1, max_tokens=4096, stream=False, temperature=0.7, **kwargs):
-        if kwargs:
-            self.history.append(kwargs)
-            self.full_history.append(kwargs)
+    def send(self, message={}, n=1, **kwargs):
+        if message:
+            self.history.append(message)
+            self.full_history.append(message)
+
+        max_tokens = kwargs.get("max_tokens", 4096)
 
         while ((remaining_tokens := self.remaining_tokens(int(max_tokens))) < 1000):
             del self.history[0]
+
+        kwargs["max_tokens"] = int(remaining_tokens/n)
 
         messages = self.history
         if self.context:
             messages = [{"role": "system", "content": self.context }] + messages
 
-        a = [ "False", "True"]
-        if stream in a:
-            stream = bool(a.index(stream))
-
-        self.response = openai.ChatCompletion.create(
-            model=self.model,
-            messages=messages,
-            n=n,
-            stream=stream,
-            temperature=float(temperature),
-            max_tokens=int((remaining_tokens)/n) - 1
-        )
-        return self.response
+        try:
+            self.response = openai.ChatCompletion.create(
+                messages=messages,
+                model=self.model,
+                **kwargs
+            )
+            return self.response
+        except openai.OpenAIError as e:
+            print (e.user_message, file=sys.stderr)
+            return None
 
     def user_say(self, message: str, **kwargs):
-        return self.send(role = "user", content=message, **kwargs)
+        return self.send({"role": "user", "content": message}, **kwargs)
 
     def system_say(self, message: str, **kwargs):
         self.history.append({"role": "system", "content": message})
@@ -88,50 +90,54 @@ class Assistant(object):
         self.history = []
 
     def get_next_chunk(self):
-        return next(self.response)
+        try: return next(self.response)
+        except StopIteration as e: return None
+
+# seems like vim.eva() is not recursively evaluating dictionaries.
+# let's fix that here
+def parse_config(config):
+    for k, v in config.items():
+        if k == "stream":
+            config[k] = bool(["False", "True"].index(v))
+        if k == "logit_bias":
+            for lbk in v:
+                v[lbk] = int(v[lbk])
+    return config
 
 
 def GptUpdate():
     message = vim.eval("a:message")
     task = GPT_TASKS[vim.eval("self.name")]
     task.update(message)
-    open("history.json", "w").write(str(task.history))
 
 def GptReplay():
-    task = GPT_TASKS[vim.eval("self.name")]
-    task.send()
+    name = vim.eval("self.name")
+    config = parse_config(vim.eval("self.config"))
+    task = GPT_TASKS[name]
+    task.send(**config)
 
 def GptCreateTask():
     name = vim.eval("self.name")
-    GPT_TASKS[vim.eval("self.name")] = Assistant(context=vim.eval("self.context"))
+    model = vim.eval("self.model")
+    GPT_TASKS[name] = Assistant(model=model, context=vim.eval("self.context"))
 
 def GptUserSay():
     name = vim.eval("self.name")
-    task = GPT_TASKS[vim.eval("self.name")]
+    task = GPT_TASKS[name]
 
-    config = vim.eval("self.config")
-    for key in config:
-        config[key] = vim.eval(f"self.config.{key}")
-    config = config if config else {}
+    config = parse_config(vim.eval("self.config"))
     ret = task.user_say(vim.eval("a:message"), **config)
-    stream = vim.eval("self.config['stream']")
-    if (not stream) or stream == 'False':
-        return ret
-    else:
-        return None
+
+    return None if config["stream"] else ret
 
 def GptSystemSay():
     name = vim.eval("self.name")
-    task = GPT_TASKS[vim.eval("self.name")]
+    task = GPT_TASKS[name]
 
-    config = vim.eval("self.config")
-    config = config if config else {}
-
+    config = parse_config(vim.eval("self.config"))
     ret = task.system_say(vim.eval("a:message"), **config)
-    if (not vim.eval("self.config['stream']")):
-        return ret
-    else:
-        return None
+
+    return None if config["stream"] else ret
 
 def GptReset():
     task = GPT_TASKS[vim.eval("self.name")]

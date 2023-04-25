@@ -8,7 +8,7 @@ function gpt#chat#register(callback) abort
     let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
     let Wchat = gpt#widget#GenericWidget("Chat", l:context)
     let Wchat = Wchat->extend({
-          \ "task":     gpt#task#create("Chat", l:context),
+          \ "task":     gpt#task#create("Chat", l:context, {"stream": v:true}),
           \ "callback": v:null,
           \ "lang":     v:null,
           \
@@ -62,7 +62,7 @@ function gpt#chat#SetLang(lang) abort dict
 endfunction
 
 function gpt#chat#UserSay(prompt) abort dict
-  call self.task.UserSay(a:prompt)
+  return self.task.UserSay(a:prompt)
 endfunction
 
 function gpt#chat#Prepare() abort dict
@@ -91,6 +91,7 @@ endfunction
 
 function gpt#chat#StreamStop() abort dict
   call timer_stop(self.GetStreamId())
+  call self.SetVar("timer_id", v:null)
 endfunction
 
 function gpt#chat#AssistReplay() abort dict

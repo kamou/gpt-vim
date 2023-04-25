@@ -62,6 +62,12 @@ function s:timer_cb(id) abort
   call timer_pause(a:id, 1)
 
   let chunk = Wchat.GetNextChunk()
+  if empty(chunk)
+    echoerr "Unexpected end of stream, aborting"
+    call Wchat.StreamStop()
+    return
+  endif
+
   let delta = chunk["delta"]
   let index = chunk["index"]
 
