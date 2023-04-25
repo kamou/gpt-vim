@@ -17,6 +17,7 @@ function gpt#chat#register(callback) abort
           \ "SetLang":              function('gpt#chat#SetLang'),
           \ "UserSay":              function('gpt#chat#UserSay'),
           \ "Prepare":              function('gpt#chat#Prepare'),
+          \ "Collect":              function('gpt#chat#Collect'),
           \ "GetSummary":           function('gpt#chat#GetSummary'),
           \ "SetSummary":           function('gpt#chat#SetSummary'),
           \ "StreamInit":           function('gpt#chat#StreamInit'),
@@ -135,5 +136,11 @@ endfunction
 
 function gpt#chat#SetStreamingCallback(callback) abort dict
   let self.callback = a:callback
+endfunction
+
+function gpt#chat#Collect() dict abort
+  let answer_start = self.GetPos("'g")[1]
+  let lines = getbufline(self.bufnr, answer_start, '$')  " get all the new lines
+  return join(lines, "\n")  " join the lines with a newline character
 endfunction
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0

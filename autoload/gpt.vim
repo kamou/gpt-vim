@@ -64,6 +64,13 @@ function s:timer_cb(id) abort
   let chunk = Wchat.GetNextChunk()
   if empty(chunk)
     echoerr "Unexpected end of stream, aborting"
+    " Collect the answer and a stop the streaming
+    let content = Wchat.Collect()
+
+    " commit memory
+    let message =  { "role": "assistant", "content" : content }
+    call Wchat.AssistUpdate(message)
+    " TODO: implement retry before stop ?
     call Wchat.StreamStop()
     return
   endif
@@ -91,9 +98,7 @@ function s:timer_cb(id) abort
   endif
 
   if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
-    let answer_start = Wchat.GetPos("'g")[1]
-    let lines = getbufline(Wchat.bufnr, answer_start, '$')  " get all the new lines
-    let content = join(lines, "\n")  " join the lines with a newline character
+    let content = Wchat.Collect()
 
     " commit memory
     let message =  { "role": "assistant", "content" : content }
@@ -101,9 +106,8 @@ function s:timer_cb(id) abort
 
     " done
     if chunk["finish_reason"] == "stop"
-      call timer_stop(a:id)
-      call setbufvar(Wchat.bufnr, "timer_id", v:null)
-      return v:false
+      call Wchat.StreamStop()
+      return
     endif
 
     " too many tokens, freeing a few tokens by memory loss. Replay will delete last
