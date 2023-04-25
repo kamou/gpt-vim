@@ -1,11 +1,11 @@
-gptvim-chatwidget	gpt-vim.txt	/*gptvim-chatwidget*
 gptvim-chatwidget-mappings	gpt-vim.txt	/*gptvim-chatwidget-mappings*
 gptvim-contents	gpt-vim.txt	/*gptvim-contents*
 gptvim-contributions	gpt-vim.txt	/*gptvim-contributions*
-gptvim-conversationwidget	gpt-vim.txt	/*gptvim-conversationwidget*
 gptvim-conversationwidget-mappings	gpt-vim.txt	/*gptvim-conversationwidget-mappings*
+gptvim-gpa	gpt-vim.txt	/*gptvim-gpa*
 gptvim-installation	gpt-vim.txt	/*gptvim-installation*
 gptvim-integration	gpt-vim.txt	/*gptvim-integration*
 gptvim-intro	gpt-vim.txt	/*gptvim-intro*
+gptvim-launch-chat	gpt-vim.txt	/*gptvim-launch-chat*
 gptvim-license	gpt-vim.txt	/*gptvim-license*
 gptvim-usage	gpt-vim.txt	/*gptvim-usage*

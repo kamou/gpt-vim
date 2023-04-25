@@ -13,6 +13,7 @@ function gpt#chat#register(callback) abort
           \ "lang":     v:null,
           \
           \ "Reset":                function('gpt#chat#Reset'),
+          \ "Cancel":               function('gpt#chat#Cancel'),
           \ "GetLang":              function('gpt#chat#GetLang'),
           \ "SetLang":              function('gpt#chat#SetLang'),
           \ "UserSay":              function('gpt#chat#UserSay'),
@@ -44,21 +45,27 @@ function gpt#chat#register(callback) abort
     call Wchat.Map("n", "r", ":call gpt#widget#get('Chat').Reset()<CR>")
     call Wchat.Map("n", "s", ":call gpt#widget#get('Conversations').Save()<CR>")
     call Wchat.Map("n", "L", ":call gpt#widget#get('Conversations').List()<CR>")
+    call Wchat.Map("n", "c", ":call gpt#widget#get('Chat').Cancel()<CR>")
     call Wchat.Prepare()
   endif
   return Wchat
 endfunction
 
 function gpt#chat#Reset() abort dict
-  call self.task.Reset()
-  call self.DeleteLines(1, '$')
-  call self.SetVar("summary", v:null)
+  if self.Cancel()
+    call self.task.Reset()
+    call self.DeleteLines(1, '$')
+    call self.SetVar("summary", v:null)
+  endif
 endfunction
 
 function gpt#chat#Cancel() abort dict
-  call self.task.Reset()
-  call self.DeleteLines(1, '$')
-  call self.SetVar("summary", v:null)
+  if self.GetVar("timer_id")
+    if confirm("Are you sure you want to cancel the streaming ?", "&yes\n&no") == 1
+      call self.StreamStop()
+    endif
+  endif
+  return !self.IsStreaming()
 endfunction
 
 function gpt#chat#GetLang() abort dict

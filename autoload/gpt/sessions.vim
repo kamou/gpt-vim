@@ -71,48 +71,54 @@ endfunction
 
 function gpt#sessions#Save() dict
   let Wchat =  gpt#widget#get("Chat")
-  let summary =  Wchat.GetSummary()
-  if empty(summary)
-    let l:messages = Wchat.task.GetMessages()
-    let summary = self.summarizer.Gen(l:messages)
-    call self.SaveConv()
-    call Wchat.SetSummary(summary)
+  if !Wchat.IsStreaming()
+    let summary =  Wchat.GetSummary()
+    if empty(summary)
+      let l:messages = Wchat.task.GetMessages()
+      let summary = self.summarizer.Gen(l:messages)
+      call self.SaveConv()
+      call Wchat.SetSummary(summary)
+    else
+      call self.UpdateConv(summary)
+    endif
   else
-    call self.UpdateConv(summary)
+    echomsg "You can't save during streaming, wait for the end or press `c` to cancel the stream"
   endif
 endfunction
 
 fun! gpt#sessions#Select() dict
   let Wchat = gpt#widget#get("Chat")
-  let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
+  if Wchat.Cancel() 
+    let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
 
-  let l:messages = self.db.Get(l:summary)
-  call Wchat.task.SetMessages(l:messages)
+    let l:messages = self.db.Get(l:summary)
+    call Wchat.task.SetMessages(l:messages)
 
-  let l:content = ""
-  for message in l:messages
-    if message["role"] == "user"
-      let l:content .= "\n\n" . gpt#utils#build_header("User")
-    elseif message["role"] == "assistant"
-      let l:content .= "\n\n" . gpt#utils#build_header("Assistant")
-    else
-      continue
-    endif
-    let l:content .= message["content"]
-  endfor
+    let l:content = ""
+    for message in l:messages
+      if message["role"] == "user"
+        let l:content .= "\n\n" . gpt#utils#build_header("User")
+      elseif message["role"] == "assistant"
+        let l:content .= "\n\n" . gpt#utils#build_header("Assistant")
+      else
+        continue
+      endif
+      let l:content .= message["content"]
+    endfor
 
 
-  call Wchat.SetVar("&modifiable", v:true)
-  call deletebufline(bufname(Wchat.bufnr), 1 , '$')
-  call Wchat.SetSummary(l:summary)
+    call Wchat.SetVar("&modifiable", v:true)
+    call deletebufline(bufname(Wchat.bufnr), 1 , '$')
+    call Wchat.SetSummary(l:summary)
 
-  for ln in split(l:content, "\n", 1)
-    call appendbufline(bufname(Wchat.bufnr), '$', ln)
-  endfor
-  call Wchat.SetVar("&modifiable", v:false)
+    for ln in split(l:content, "\n", 1)
+      call appendbufline(bufname(Wchat.bufnr), '$', ln)
+    endfor
+    call Wchat.SetVar("&modifiable", v:false)
 
-  call self.Hide()
-  call Wchat.Show()
+    call self.Hide()
+    call Wchat.Show()
+  endif
 endfun
 
 function gpt#sessions#Delete() dict

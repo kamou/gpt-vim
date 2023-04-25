@@ -42,10 +42,11 @@ vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 You may update it in you .vimrc file.
 
 ## GPT buffer keys
-  - `r` reset current session memory, GPT will forget everything, the buffer will be cleared
+  - `r` reset current session memory, GPT will forget everything, the buffer will be cleared.
   - `q` close gpt buffer. Memory is kept untouched, gpt will recall previous (most recent) messages.
-  - `s` save the current session history
-  - `L` list previously saved sessions (press enter to load selected session)
+  - `s` save the current session history.
+  - `L` list previously saved sessions (press enter to load selected session).
+  - `c` Cancel the current stream. (The answer will be lost, and not saved in the database)
 
 ## Session list keys
   - `q` close the list
