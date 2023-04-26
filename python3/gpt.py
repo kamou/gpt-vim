@@ -152,8 +152,8 @@ def GptGetNextChunk():
 def GptSetMessages():
     messages = vim.eval("a:messages")
     task = GPT_TASKS[vim.eval("self.name")]
-    task.history = messages
-    task.full_history = messages
+    task.history = messages[:]
+    task.full_history = messages[:]
 
 def GptGetMessages():
     task = GPT_TASKS[vim.eval("self.name")]
