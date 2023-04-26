@@ -62,7 +62,7 @@ function gpt#sessions#UpdateConv(summary, messages) dict
 endfunction
 
 function gpt#sessions#Save() dict
-  let Wchat = gpt#utils#FromBuffer("Chat")
+  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
   if !Wchat.IsStreaming()
     let summary =  Wchat.GetSummary()
     let l:messages = Wchat.task.GetMessages()
@@ -78,8 +78,14 @@ function gpt#sessions#Save() dict
   endif
 endfunction
 
+fun! gpt#sessions#VSplit() dict
+endfunc
+
+fun! gpt#sessions#Split() dict
+endfunc
+
 fun! gpt#sessions#Select() dict
-  let Wchat = gpt#utils#FromBuffer("Chat")
+  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
   if Wchat.Cancel()
     let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
 
@@ -119,7 +125,8 @@ function gpt#sessions#Delete() dict
   let summaries = self.GetSummaries()
   let closeit = empty(summaries)
 
-  let Wchat = gpt#utils#FromBuffer("Chat")
+  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
+  " TODO: look for all gpt chat buffers
   if Wchat.GetSummary() == l:summary
     call Wchat.SetSummary(v:null)
   endif
