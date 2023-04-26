@@ -20,9 +20,9 @@ function gpt#sessions#create()
   call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
   call setbufvar(Wconv.bufnr, "&syntax", "markdown")
 
-  call Wconv.Map("n", "<CR>"      , ":call gpt#widget#get('Conversations').Select()<CR>")
-  call Wconv.Map("n", "<nowait> d", ":call gpt#widget#get('Conversations').Delete()<CR>")
-  call Wconv.Map("n", "q"         , ":call gpt#widget#get('Conversations').Hide()<CR>")
+  call Wconv.Map("n", "<CR>"      , ":call gpt#utils#FromBuffer('Conversations').Select()<CR>")
+  call Wconv.Map("n", "<nowait> d", ":call gpt#utils#FromBuffer('Conversations').Delete()<CR>")
+  call Wconv.Map("n", "q"         , ":call gpt#utils#FromBuffer('Conversations').Hide()<CR>")
   call gpt#utils#Register(l:name, Wconv)
   return Wconv
 endfunction
@@ -62,7 +62,7 @@ function gpt#sessions#UpdateConv(summary, messages) dict
 endfunction
 
 function gpt#sessions#Save() dict
-  let Wchat =  gpt#widget#get("Chat")
+  let Wchat = gpt#utils#FromBuffer("Chat")
   if !Wchat.IsStreaming()
     let summary =  Wchat.GetSummary()
     let l:messages = Wchat.task.GetMessages()
@@ -79,8 +79,8 @@ function gpt#sessions#Save() dict
 endfunction
 
 fun! gpt#sessions#Select() dict
-  let Wchat = gpt#widget#get("Chat")
-  if Wchat.Cancel() 
+  let Wchat = gpt#utils#FromBuffer("Chat")
+  if Wchat.Cancel()
     let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
 
     let l:messages = self.db.Get(l:summary)
@@ -119,7 +119,7 @@ function gpt#sessions#Delete() dict
   let summaries = self.GetSummaries()
   let closeit = empty(summaries)
 
-  let Wchat =  gpt#widget#get("Chat")
+  let Wchat = gpt#utils#FromBuffer("Chat")
   if Wchat.GetSummary() == l:summary
     call Wchat.SetSummary(v:null)
   endif
