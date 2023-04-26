@@ -97,16 +97,8 @@ class GPTDataBase(object):
         self.connection.commit()
 
     def update(self, summary, messages):
-        self.cursor.execute(f"DELETE FROM messages WHERE conversation_summary=?", (summary,))
-        self.connection.commit()
-
-        # Insert the new messages
-        for message in messages:
-            role = message['role']
-            content = message['content']
-            insert_query = f"INSERT INTO messages (conversation_summary, role, content) VALUES (?, ?, ?);"
-            self.cursor.execute(insert_query, (summary, role, content))
-            self.connection.commit()
+        self.delete(summary)
+        self.save(summary, messages)
 
     def extract_v1(self):
         table_name = 'conversations'
