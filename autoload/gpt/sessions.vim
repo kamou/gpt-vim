@@ -52,34 +52,28 @@ function gpt#sessions#List() dict
   endif
 endfun
 
-function gpt#sessions#SaveConv() dict
-  let Wchat =  gpt#widget#get("Chat")
-  let l:messages = Wchat.task.GetMessages()
-
-  if !empty(l:messages)
-    let summary = self.summarizer.Gen(l:messages)
-    return self.db.Save(summary, messages)
+function gpt#sessions#SaveConv(summary, messages) dict
+  if !empty(a:messages)
+    return self.db.Save(a:summary, a:messages)
   endif
   return v:null
 endfunction
 
-function gpt#sessions#UpdateConv(summary) dict
-  let Wchat =  gpt#widget#get("Chat")
-  let l:messages = Wchat.task.GetMessages()
-  call self.db.Update(a:summary, l:messages)
+function gpt#sessions#UpdateConv(summary, messages) dict
+  call self.db.Update(a:summary, a:messages)
 endfunction
 
 function gpt#sessions#Save() dict
   let Wchat =  gpt#widget#get("Chat")
   if !Wchat.IsStreaming()
     let summary =  Wchat.GetSummary()
+    let l:messages = Wchat.task.GetMessages()
     if empty(summary)
-      let l:messages = Wchat.task.GetMessages()
       let summary = self.summarizer.Gen(l:messages)
-      call self.SaveConv()
+      call self.SaveConv(summary, l:messages)
       call Wchat.SetSummary(summary)
     else
-      call self.UpdateConv(summary)
+      call self.UpdateConv(summary, l:messages)
     endif
   else
     echomsg "You can't save during streaming, wait for the end or press `c` to cancel the stream"
