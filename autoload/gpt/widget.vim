@@ -1,13 +1,3 @@
-let g:__GPTVIMWidgets__ = {}
-
-function gpt#widget#get(name)abort
-  if g:__GPTVIMWidgets__->has_key(a:name)
-    return g:__GPTVIMWidgets__[a:name]
-  endif
-
-  return v:null
-endfunction
-
 function gpt#widget#GenericWidget(name, ...) abort
   let bnr = bufnr("GPT " .. a:name)
   if (bnr >= 0)
@@ -69,10 +59,10 @@ function gpt#widget#GenericWidget(name, ...) abort
 
   call bufload(w.bufnr)
 
-  if exists('*airline#add_statusline_func') && !len(g:__GPTVIMWidgets__)
+  if exists('*airline#add_statusline_func') && !exists("g:__vim_gpt_airline_hook_set")
     function! GptAirlineHook(...)
       " TODO: add configuration information ?
-      if &filetype =~ '^gpt'
+      if getbufvar(bufnr('%'), "__GPT__")
         let w:airline_section_a = '%f'
         let w:airline_section_b = ''
         let w:airline_section_c = ''
@@ -81,9 +71,8 @@ function gpt#widget#GenericWidget(name, ...) abort
     endfunction
 
     call airline#add_statusline_func('GptAirlineHook')
+    let g:__vim_gpt_airline_hook_set = v:true
   endif
-
-  let g:__GPTVIMWidgets__[a:name] = w
 
   return w
 

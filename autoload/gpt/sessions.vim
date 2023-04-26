@@ -1,31 +1,29 @@
 
-function gpt#sessions#register()
+function gpt#sessions#create()
   let l:name = "Conversations"
-  let Wconv = gpt#widget#get(l:name)
-  if empty(Wconv)
-    let Wconv = gpt#widget#GenericWidget(l:name)
-    let Wconv = Wconv->extend({
-          \ "summarizer":           gpt#summarizer#create(),
-          \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
-          \ "List":                 function('gpt#sessions#List'),
-          \ "Save":                 function('gpt#sessions#Save'),
-          \ "Select":               function('gpt#sessions#Select'),
-          \ "Delete":               function('gpt#sessions#Delete'),
-          \ "SaveConv":             function('gpt#sessions#SaveConv'),
-          \ "UpdateConv":           function('gpt#sessions#UpdateConv'),
-          \ "UpdateList":           function('gpt#sessions#UpdateList'),
-          \ "GetSummaries":         function('gpt#sessions#GetSummaries'),
-          \ })
-    call Wconv.SetAutoFocus(v:true)
-    call Wconv.SetAxis("vertical")
-    call Wconv.SetSize(40)
-    call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
-    call setbufvar(Wconv.bufnr, "&syntax", "markdown")
+  let Wconv = gpt#widget#GenericWidget(l:name)
+  let Wconv = Wconv->extend({
+        \ "summarizer":           gpt#summarizer#create(),
+        \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
+        \ "List":                 function('gpt#sessions#List'),
+        \ "Save":                 function('gpt#sessions#Save'),
+        \ "Select":               function('gpt#sessions#Select'),
+        \ "Delete":               function('gpt#sessions#Delete'),
+        \ "SaveConv":             function('gpt#sessions#SaveConv'),
+        \ "UpdateConv":           function('gpt#sessions#UpdateConv'),
+        \ "UpdateList":           function('gpt#sessions#UpdateList'),
+        \ "GetSummaries":         function('gpt#sessions#GetSummaries'),
+        \ })
+  call Wconv.SetAutoFocus(v:true)
+  call Wconv.SetAxis("vertical")
+  call Wconv.SetSize(40)
+  call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
+  call setbufvar(Wconv.bufnr, "&syntax", "markdown")
 
-    call Wconv.Map("n", "<CR>"      , ":call gpt#widget#get('Conversations').Select()<CR>")
-    call Wconv.Map("n", "<nowait> d", ":call gpt#widget#get('Conversations').Delete()<CR>")
-    call Wconv.Map("n", "q"         , ":call gpt#widget#get('Conversations').Hide()<CR>")
-  endif
+  call Wconv.Map("n", "<CR>"      , ":call gpt#widget#get('Conversations').Select()<CR>")
+  call Wconv.Map("n", "<nowait> d", ":call gpt#widget#get('Conversations').Delete()<CR>")
+  call Wconv.Map("n", "q"         , ":call gpt#widget#get('Conversations').Hide()<CR>")
+  call gpt#utils#Register(l:name, Wconv)
   return Wconv
 endfunction
 
@@ -124,14 +122,14 @@ function gpt#sessions#Delete() dict
   let Wchat =  gpt#widget#get("Chat")
   if Wchat.GetSummary() == l:summary
     call Wchat.SetSummary(v:null)
-    end
+  endif
 
-    call self.UpdateList(summaries)
+  call self.UpdateList(summaries)
 
-    if closeit
-      call self.Hide()
-      end
-    endfunction
+  if closeit
+    call self.Hide()
+  endif
+endfunction
 
 
 

@@ -1,53 +1,51 @@
 
-function gpt#chat#register(callback) abort
-  let Wchat = gpt#widget#get("Chat")
-  if (empty(Wchat))
+function gpt#chat#create(callback, name) abort
 
-    let l:lang = getbufvar(bufnr('%'), "&filetype")
-    let l:lang = l:lang && (l:lang != "help") ? l:lang : "lang_name"
-    let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
-    let Wchat = gpt#widget#GenericWidget("Chat", l:context)
-    let Wchat = Wchat->extend({
-          \ "task":     gpt#task#create("Chat", l:context, {"stream": v:true}),
-          \ "callback": v:null,
-          \ "lang":     v:null,
-          \
-          \ "Reset":                function('gpt#chat#Reset'),
-          \ "Cancel":               function('gpt#chat#Cancel'),
-          \ "GetLang":              function('gpt#chat#GetLang'),
-          \ "SetLang":              function('gpt#chat#SetLang'),
-          \ "UserSay":              function('gpt#chat#UserSay'),
-          \ "Prepare":              function('gpt#chat#Prepare'),
-          \ "Collect":              function('gpt#chat#Collect'),
-          \ "GetSummary":           function('gpt#chat#GetSummary'),
-          \ "SetSummary":           function('gpt#chat#SetSummary'),
-          \ "StreamInit":           function('gpt#chat#StreamInit'),
-          \ "StreamStop":           function('gpt#chat#StreamStop'),
-          \ "StreamStart":          function('gpt#chat#StreamStart'),
-          \ "IsStreaming":          function('gpt#chat#IsStreaming'),
-          \ "GetStreamId":          function('gpt#chat#GetStreamId'),
-          \ "SetStreamId":          function('gpt#chat#SetStreamId'),
-          \ "AssistReplay" :        function('gpt#chat#AssistReplay'),
-          \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
-          \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
-          \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
-          \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
-          \ })
-    let Wchat.task.config.stream = v:true
-    call Wchat.SetAutoFocus(v:false)
-    call Wchat.SetStreamingCallback(a:callback)
-    call setbufvar(Wchat.bufnr, "&filetype", "markdown")
-    call setbufvar(Wchat.bufnr, "&syntax", "markdown")
-    call Wchat.SetStreamId(v:null)
-    call Wchat.SetAxis("auto")
-    call Wchat.SetSize(-1)
-    call Wchat.Map("n", "q", ":call gpt#widget#get('Chat').Hide()<CR>")
-    call Wchat.Map("n", "r", ":call gpt#widget#get('Chat').Reset()<CR>")
-    call Wchat.Map("n", "s", ":call gpt#widget#get('Conversations').Save()<CR>")
-    call Wchat.Map("n", "L", ":call gpt#widget#get('Conversations').List()<CR>")
-    call Wchat.Map("n", "c", ":call gpt#widget#get('Chat').Cancel()<CR>")
-    call Wchat.Prepare()
-  endif
+  let l:lang = getbufvar(bufnr('%'), "&filetype")
+  let l:lang = l:lang && (l:lang != "help") ? l:lang : "lang_name"
+  let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
+  let Wchat = gpt#widget#GenericWidget(a:name, l:context)
+  let Wchat = Wchat->extend({
+        \ "task":     gpt#task#create(a:name, l:context, {"stream": v:true}),
+        \ "callback": v:null,
+        \ "lang":     v:null,
+        \
+        \ "Reset":                function('gpt#chat#Reset'),
+        \ "Cancel":               function('gpt#chat#Cancel'),
+        \ "GetLang":              function('gpt#chat#GetLang'),
+        \ "SetLang":              function('gpt#chat#SetLang'),
+        \ "UserSay":              function('gpt#chat#UserSay'),
+        \ "Prepare":              function('gpt#chat#Prepare'),
+        \ "Collect":              function('gpt#chat#Collect'),
+        \ "GetSummary":           function('gpt#chat#GetSummary'),
+        \ "SetSummary":           function('gpt#chat#SetSummary'),
+        \ "StreamInit":           function('gpt#chat#StreamInit'),
+        \ "StreamStop":           function('gpt#chat#StreamStop'),
+        \ "StreamStart":          function('gpt#chat#StreamStart'),
+        \ "IsStreaming":          function('gpt#chat#IsStreaming'),
+        \ "GetStreamId":          function('gpt#chat#GetStreamId'),
+        \ "SetStreamId":          function('gpt#chat#SetStreamId'),
+        \ "AssistReplay" :        function('gpt#chat#AssistReplay'),
+        \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
+        \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
+        \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
+        \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
+        \ })
+  let Wchat.task.config.stream = v:true
+  call Wchat.SetAutoFocus(v:false)
+  call Wchat.SetStreamingCallback(a:callback)
+  call setbufvar(Wchat.bufnr, "&filetype", "markdown")
+  call setbufvar(Wchat.bufnr, "&syntax", "markdown")
+  call Wchat.SetStreamId(v:null)
+  call Wchat.SetAxis("auto")
+  call Wchat.SetSize(-1)
+  call Wchat.Map("n", "q", ":call gpt#utils#FromBuffer('" .. a:name .. "').Hide()<CR>")
+  call Wchat.Map("n", "r", ":call gpt#utils#FromBuffer('" .. a:name .. "').Reset()<CR>")
+  call Wchat.Map("n", "s", ":call gpt#utils#FromBuffer('Conversations').Save()<CR>")
+  call Wchat.Map("n", "L", ":call gpt#utils#FromBuffer('Conversations').List()<CR>")
+  call Wchat.Map("n", "c", ":call gpt#utils#FromBuffer('" .. a:name .. "').Cancel()<CR>")
+  call Wchat.Prepare()
+  call gpt#utils#Register(a:name, Wchat)
   return Wchat
 endfunction
 

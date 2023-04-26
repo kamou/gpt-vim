@@ -16,8 +16,14 @@ function gpt#Assist(vmode) range abort
   " Prepare func args
   let l:selection = a:vmode ? gpt#utils#visual_selection() : v:null
 
-  let Wchat = gpt#chat#register(funcref('s:timer_cb'))
-  call gpt#sessions#register()
+  let Wchat = gpt#utils#FromBuffer("Chat")
+  if Wchat->empty()
+    let Wchat = gpt#chat#create(funcref('s:timer_cb'), "Chat")
+  endif
+
+  if gpt#utils#FromBuffer("Conversations")->empty()
+    call gpt#sessions#create()
+  endif
 
   " update the filetype according to the current buffer
   if !gpt#utils#ours(bufnr('%'))
@@ -62,7 +68,7 @@ endfunction
 
 
 function s:timer_cb(id) abort
-  let Wchat = gpt#widget#get("Chat")
+  let Wchat = gpt#utils#FromBuffer("Chat")
   call timer_pause(a:id, 1)
 
   let chunk = Wchat.GetNextChunk()
@@ -123,7 +129,7 @@ function s:timer_cb(id) abort
 endfunction
 
 function gpt#terminate()
-  let Wchat = gpt#widget#get("Chat")
+  let Wchat = gpt#utils#FromBuffer("Chat")
   if !Wchat->empty() && !Wchat.GetStreamId()->empty()
     call timer_stop(Wchat.GetStreamId())
   endif

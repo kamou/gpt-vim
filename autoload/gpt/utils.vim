@@ -61,4 +61,22 @@ function gpt#utils#ours(bnr)
   return getbufvar(a:bnr, "__GPT__") 
 endfunction
 
+function gpt#utils#Register(name, obj) abort
+  let bufnr = bufnr(a:name)
+  if bufnr >= 0
+    call setbufvar(bufnr, "__obj__", a:obj)
+  else
+    throw "No such buffer: " .. a:name
+  endif
+endfunction
+
+function gpt#utils#FromBuffer(name) abort
+  let bufnr = bufnr(a:name)
+  if bufnr >= 0
+    return getbufvar(bufnr, "__obj__")
+  endif
+  return v:null
+endfunction
+
+
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
