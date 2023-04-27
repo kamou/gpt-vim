@@ -60,5 +60,3 @@ You may update it in you .vimrc file.
   - `<cr>` select the session under the cursor
   - `s`: Open the conversation under the cursor in a horizontal split.
   - `v`: Open the conversation under the cursor in a vertical split.
-
-requires the markdown and markdown_inlines treesitter plugins
