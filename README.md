@@ -47,12 +47,12 @@ You may update it in you .vimrc file.
   - `s` save the current session history.
   - `L` list previously saved sessions (press enter to load selected session).
   - `c` Cancel the current stream. (The answer will be lost, and not saved in the database)
-  - `Y` Enter Yank Mode.
+  - `B` Enter Block Mode.
 
-## Yank Mode
+## Block Mode
   - `j` Cycle down to next fenced code block.
   - `k` Cycle up to next fenced code block.
-  - `<cr>` Copy current block and leave Yank Mode.
+  - `y` Copy current block and leave Block Mode.
 
 ## Session list keys
   - `q` close the list

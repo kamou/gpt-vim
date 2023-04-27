@@ -83,12 +83,12 @@ In visual mode, the selection will be appended to the prompt.
 - `s`: Save the current chat conversation to the list of saved sessions.
 - `L`: List the saved chat session summaries in the conversation widget.
 - `c`: Cancel the current stream. The current answer will be lost.
-- `Y` Enter Yank Mode.
+- `B` Enter Block Mode.
 
-##### Yank Mode Mappings
+##### Block Mode Mappings                          *gptvim-chatwidget-block*
   - `j` Cycle down to next fenced code block.
   - `k` Cycle up to next fencced code block.
-  - `<cr>` Copy current block and leave Yank Mode.
+  - `y` Copy current block and leave Yank Mode.
 
 ##### Conversation Mappings             *gptvim-conversationwidget-mappings*
 
@@ -97,6 +97,15 @@ In visual mode, the selection will be appended to the prompt.
 - `q`: Hide the conversation widget.
 - `s`: Open the conversation under the cursor in a horizontal split.
 - `v`: Open the conversation under the cursor in a vertical split.
+
+=============================================================================
+CONFIGURATION                                         *gptvim-configuration*
+
+* enable chat window autofocus
+  let g:gpt_vim_autofocus = 1
+
+* change default model
+  let g:gpt_vim_user_mode = "gpt-4"
 
 =============================================================================
 

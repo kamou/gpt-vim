@@ -12,17 +12,19 @@ function gpt#chat#create(args) abort
         \ "task":     gpt#task#create(l:name ? l:name : string(rand(srand())), l:context, {"stream": v:true}),
         \ "callback": v:null,
         \ "lang":     v:null,
+        \ "match_id": -1,
         \
         \ "Reset":                function('gpt#chat#Reset'),
+        \ "Close":                function('gpt#chat#Close'),
         \ "Cancel":               function('gpt#chat#Cancel'),
         \ "GetLang":              function('gpt#chat#GetLang'),
         \ "SetLang":              function('gpt#chat#SetLang'),
         \ "UserSay":              function('gpt#chat#UserSay'),
         \ "Prepare":              function('gpt#chat#Prepare'),
         \ "Collect":              function('gpt#chat#Collect'),
-        \ "YankMode":             function('gpt#chat#YankMode'),
-        \ "YankModeK":            function('gpt#chat#YankModeK'),
-        \ "YankModeJ":            function('gpt#chat#YankModeJ'),
+        \ "BlockMode":            function('gpt#chat#BlockMode'),
+        \ "BlockModeK":           function('gpt#chat#BlockModeK'),
+        \ "BlockModeJ":           function('gpt#chat#BlockModeJ'),
         \ "GetSummary":           function('gpt#chat#GetSummary'),
         \ "SetSummary":           function('gpt#chat#SetSummary'),
         \ "StreamInit":           function('gpt#chat#StreamInit'),
@@ -35,7 +37,9 @@ function gpt#chat#create(args) abort
         \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
         \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
         \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
-        \ "YankModeAccept":       function('gpt#chat#YankModeAccept'),
+        \ "BlockModeYank":        function('gpt#chat#BlockModeYank'),
+        \ "BlockModePlay":        function('gpt#chat#BlockModePlay'),
+        \ "BlockModeCancel":      function('gpt#chat#BlockModeCancel'),
         \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
         \ })
 
@@ -46,12 +50,12 @@ function gpt#chat#create(args) abort
   call setbufvar(Wchat.bufnr, "&filetype", "markdown")
   call setbufvar(Wchat.bufnr, "&syntax", "markdown")
   call Wchat.SetStreamId(v:null)
-  call Wchat.Map("n", "q", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr) .. ").Hide()<CR>")
+  call Wchat.Map("n", "q", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr) .. ").Close()<CR>")
   call Wchat.Map("n", "r", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr) .. ").Reset()<CR>")
   call Wchat.Map("n", "s", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).Save()<CR>")
   call Wchat.Map("n", "L", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).List()<CR>")
   call Wchat.Map("n", "c", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").Cancel()<CR>")
-  call Wchat.Map("n", "Y", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").YankMode()<CR>")
+  call Wchat.Map("n", "B", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").BlockMode()<CR>")
   call Wchat.Prepare()
   call gpt#utils#Register(Wchat.bufnr, Wchat)
   return Wchat
@@ -63,6 +67,14 @@ function gpt#chat#Reset() abort dict
     call self.DeleteLines(1, '$')
     call self.SetVar("summary", v:null)
   endif
+endfunction
+
+function gpt#chat#Close() abort dict
+  if self.match_id > 0
+    call self.BlockModeCancel()
+  endif
+
+  call self.Hide()
 endfunction
 
 function gpt#chat#Cancel() abort dict
@@ -167,44 +179,69 @@ function gpt#chat#Collect() dict abort
   return join(lines, "\n")  " join the lines with a newline character
 endfunction
 
-function gpt#chat#YankMode() dict abort
-  execute "nmap <silent> <buffer> j :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeJ()<CR>"
-  execute "nmap <silent> <buffer> k :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeK()<CR>"
-  execute "nmap <silent> <buffer> <CR> :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeAccept()<CR>"
-  let self.match_end = searchpos('^```$', 'bw')
-  let self.match_start = searchpos('^```.*$', 'bw')
-  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
-  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
-  let self.save_hlsearch = &hlsearch
-  setlocal hlsearch
+function! SelectLines(X, Y)
+  " Move cursor to the start of the range
+  execute 'normal! ' . a:X . 'G'
+
+  " Begin visual selection
+  execute 'normal! V'
+
+  " Move cursor to end of range and extend selection
+  execute 'normal! ' . (a:Y - a:X) . 'j'
 endfunction
 
-function gpt#chat#YankModeJ() dict abort
+function gpt#chat#BlockMode() dict abort
+  execute "nmap <silent> <buffer> j :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").BlockModeJ()<CR>"
+  execute "nmap <silent> <buffer> k :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").BlockModeK()<CR>"
+  execute "nmap <silent> <buffer> <nowait> y :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").BlockModeYank()<CR>"
+  execute "nmap <silent> <buffer> <nowait> p :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").BlockModePlay()<CR>"
+  execute "nmap <silent> <buffer> <Esc> :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").BlockModeCancel()<CR>"
+  let self.match_end = searchpos('^```$', 'bw')[0]
+  let self.match_start = searchpos('^```.*$', 'bw')[0]
+  call self.SetPos('.', [self.bufnr, self.match_start + 1, 1])
+
+  let self.match_id = matchadd('GptFenced', '\%>'. self.match_start . 'l\%<'. self.match_end . 'l', 0, -1, {'window': win_getid(), 'containedin': 'ALL'})
+  execute 'highlight link GptFenced Search'
+endfunction
+
+function gpt#chat#BlockModeJ() dict abort
   call matchdelete(self.match_id)
 
   let end = searchpos('^```$', 'w')
-  let self.match_end = searchpos('^```$', 'w')
-  let self.match_start = searchpos('^```.*$', 'bw')
-  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
-  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
+  let self.match_end = searchpos('^```$', 'w')[0]
+  let self.match_start = searchpos('^```.*$', 'bw')[0]
+  let self.match_id = matchadd('GptFenced', '\%>'. self.match_start. 'l\%<'. self.match_end . 'l', 0, -1, {'window': win_getid(), 'containedin': 'ALL'})
+  call self.SetPos('.', [self.bufnr, self.match_start + 1, 1])
+  " call SelectLines(self.match_start[0]+1, self.match_end[0]-1)
 endfunction
 
-function gpt#chat#YankModeK() dict abort
+function gpt#chat#BlockModeK() dict abort
   call matchdelete(self.match_id)
 
-  let self.match_end = searchpos('^```$', 'bw')
-  let self.match_start = searchpos('^```.*$', 'bw')
-  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
-  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
+  let self.match_end = searchpos('^```$', 'bw')[0]
+  let self.match_start = searchpos('^```.*$', 'bw')[0]
+  let self.match_id = matchadd('GptFenced', '\%>'. self.match_start . 'l\%<'. self.match_end . 'l', 0, -1, {'window': win_getid(), 'containedin': 'ALL'})
+  call self.SetPos('.', [self.bufnr, self.match_start + 1, 1])
 endfunction
 
-function gpt#chat#YankModeAccept() dict abort
-  " select and copy
+function gpt#chat#BlockModeYank() dict abort
+  let data = getline(self.match_start + 1, self.match_end - 1)->join("\n") .. "\n"
+  call setreg(v:register, data)
+  call self.BlockModeCancel()
+endfunction
+
+function gpt#chat#BlockModePlay() dict abort
+  " TODO: check/detect lang and run the code
+endfunction
+
+function gpt#chat#BlockModeCancel() dict abort
   execute "nunmap <buffer> j"
   execute "nunmap <buffer> k"
-  let @" = getline(self.match_start[0] + 1, self.match_end[0] - 1)->join("\n") .. "\n"
+  execute "nunmap <buffer> y"
+  execute "nunmap <buffer> p"
+  execute "nunmap <buffer> <Esc>"
   call matchdelete(self.match_id)
-  let &hlsearch = self.save_hlsearch
+  let self.match_id = -1
 endfunction
 
 function s:timer_cb(Wchat, id) abort
