@@ -83,10 +83,16 @@ In visual mode, the selection will be appended to the prompt.
 - `s`: Save the current chat conversation to the list of saved sessions.
 - `L`: List the saved chat session summaries in the conversation widget.
 - `c`: Cancel the current stream. The current answer will be lost.
+- `Y` Enter Yank Mode.
+
+##### Yank Mode Mappings
+  - `j` Cycle down to next fenced code block.
+  - `k` Cycle up to next fencced code block.
+  - `<cr>` Copy current block and leave Yank Mode.
 
 ##### Conversation Mappings             *gptvim-conversationwidget-mappings*
 
-- `<CR>`: Load the conversation under the cursor.
+- `<cr>`: Load the conversation under the cursor.
 - `d`: Delete the selected chat session.
 - `q`: Hide the conversation widget.
 - `s`: Open the conversation under the cursor in a horizontal split.

@@ -47,11 +47,17 @@ You may update it in you .vimrc file.
   - `s` save the current session history.
   - `L` list previously saved sessions (press enter to load selected session).
   - `c` Cancel the current stream. (The answer will be lost, and not saved in the database)
+  - `Y` Enter Yank Mode.
+
+## Yank Mode
+  - `j` Cycle down to next fenced code block.
+  - `k` Cycle up to next fenced code block.
+  - `<cr>` Copy current block and leave Yank Mode.
 
 ## Session list keys
   - `q` close the list
   - `d` delete the session under the cursor
-  - `Enter` select the session under the cursor
+  - `<cr>` select the session under the cursor
   - `s`: Open the conversation under the cursor in a horizontal split.
   - `v`: Open the conversation under the cursor in a vertical split.
 

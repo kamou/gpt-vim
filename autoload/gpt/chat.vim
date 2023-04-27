@@ -20,6 +20,9 @@ function gpt#chat#create(args) abort
         \ "UserSay":              function('gpt#chat#UserSay'),
         \ "Prepare":              function('gpt#chat#Prepare'),
         \ "Collect":              function('gpt#chat#Collect'),
+        \ "YankMode":             function('gpt#chat#YankMode'),
+        \ "YankModeK":            function('gpt#chat#YankModeK'),
+        \ "YankModeJ":            function('gpt#chat#YankModeJ'),
         \ "GetSummary":           function('gpt#chat#GetSummary'),
         \ "SetSummary":           function('gpt#chat#SetSummary'),
         \ "StreamInit":           function('gpt#chat#StreamInit'),
@@ -32,6 +35,7 @@ function gpt#chat#create(args) abort
         \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
         \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
         \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
+        \ "YankModeAccept":       function('gpt#chat#YankModeAccept'),
         \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
         \ })
 
@@ -47,6 +51,7 @@ function gpt#chat#create(args) abort
   call Wchat.Map("n", "s", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).Save()<CR>")
   call Wchat.Map("n", "L", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).List()<CR>")
   call Wchat.Map("n", "c", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").Cancel()<CR>")
+  call Wchat.Map("n", "Y", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").YankMode()<CR>")
   call Wchat.Prepare()
   call gpt#utils#Register(Wchat.bufnr, Wchat)
   return Wchat
@@ -160,6 +165,46 @@ function gpt#chat#Collect() dict abort
   let answer_start = self.GetPos("'g")[1]
   let lines = getbufline(self.bufnr, answer_start, '$')  " get all the new lines
   return join(lines, "\n")  " join the lines with a newline character
+endfunction
+
+function gpt#chat#YankMode() dict abort
+  execute "nmap <silent> <buffer> j :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeJ()<CR>"
+  execute "nmap <silent> <buffer> k :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeK()<CR>"
+  execute "nmap <silent> <buffer> <CR> :call gpt#utils#FromBuffer(" .. string(self.bufnr)  .. ").YankModeAccept()<CR>"
+  let self.match_end = searchpos('^```$', 'bw')
+  let self.match_start = searchpos('^```.*$', 'bw')
+  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
+  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
+  let self.save_hlsearch = &hlsearch
+  setlocal hlsearch
+endfunction
+
+function gpt#chat#YankModeJ() dict abort
+  call matchdelete(self.match_id)
+
+  let end = searchpos('^```$', 'w')
+  let self.match_end = searchpos('^```$', 'w')
+  let self.match_start = searchpos('^```.*$', 'bw')
+  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
+  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
+endfunction
+
+function gpt#chat#YankModeK() dict abort
+  call matchdelete(self.match_id)
+
+  let self.match_end = searchpos('^```$', 'bw')
+  let self.match_start = searchpos('^```.*$', 'bw')
+  let self.match_id = matchadd('Search', '\%>'. self.match_start[0] . 'l\%<'. self.match_end[0] . 'l')
+  call self.SetPos('.', [self.bufnr, self.match_start[0] + 1, self.match_start[1]])
+endfunction
+
+function gpt#chat#YankModeAccept() dict abort
+  " select and copy
+  execute "nunmap <buffer> j"
+  execute "nunmap <buffer> k"
+  let @" = getline(self.match_start[0] + 1, self.match_end[0] - 1)->join("\n") .. "\n"
+  call matchdelete(self.match_id)
+  let &hlsearch = self.save_hlsearch
 endfunction
 
 function s:timer_cb(Wchat, id) abort

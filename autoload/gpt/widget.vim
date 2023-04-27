@@ -150,7 +150,7 @@ function gpt#widget#SetPos(mark, pos) dict
   " save current buffer
   let cur_bnr = gpt#utils#switchwin(self.bufnr)
 
-  call setpos(a:mark, pos) " set mark '.' to end of buffer
+  call setpos(a:mark, a:pos) " set mark '.' to end of buffer
 
   " go back to original buffer
   let cur_bnr = gpt#utils#switchwin(cur_bnr)
