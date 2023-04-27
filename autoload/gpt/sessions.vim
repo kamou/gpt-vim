@@ -1,12 +1,14 @@
 
 function gpt#sessions#create()
-  let l:name = "Conversations"
+  let l:name = "GPT Conversations"
   let Wconv = gpt#widget#GenericWidget(l:name)
   let Wconv = Wconv->extend({
         \ "summarizer":           gpt#summarizer#create(),
         \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
         \ "List":                 function('gpt#sessions#List'),
         \ "Save":                 function('gpt#sessions#Save'),
+        \ "Split":                function('gpt#sessions#Split'),
+        \ "VSplit":               function('gpt#sessions#VSplit'),
         \ "Select":               function('gpt#sessions#Select'),
         \ "Delete":               function('gpt#sessions#Delete'),
         \ "SaveConv":             function('gpt#sessions#SaveConv'),
@@ -20,10 +22,12 @@ function gpt#sessions#create()
   call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
   call setbufvar(Wconv.bufnr, "&syntax", "markdown")
 
-  call Wconv.Map("n", "<CR>"      , ":call gpt#utils#FromBuffer('Conversations').Select()<CR>")
-  call Wconv.Map("n", "<nowait> d", ":call gpt#utils#FromBuffer('Conversations').Delete()<CR>")
-  call Wconv.Map("n", "q"         , ":call gpt#utils#FromBuffer('Conversations').Hide()<CR>")
-  call gpt#utils#Register(l:name, Wconv)
+  call Wconv.Map("n", "<CR>"      , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Select()<CR>")
+  call Wconv.Map("n", "<nowait> d", ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Delete()<CR>")
+  call Wconv.Map("n", "q"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Hide()<CR>")
+  call Wconv.Map("n", "s"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Split()<CR>")
+  call Wconv.Map("n", "v"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").VSplit()<CR>")
+  call gpt#utils#Register(Wconv.bufnr, Wconv)
   return Wconv
 endfunction
 
@@ -33,7 +37,7 @@ endfunction
 
 function gpt#sessions#UpdateList(summaries) dict
   call setbufvar(self.bufnr, "&modifiable", v:true)
-  call deletebufline(bufname(self.bufnr), 1 , '$')
+  call deletebufline(self.bufnr, 1 , '$')
   call setbufvar(self.bufnr, "&modifiable", v:false)
   if !empty(a:summaries)
     call self.SetLines(1, a:summaries)
@@ -62,7 +66,7 @@ function gpt#sessions#UpdateConv(summary, messages) dict
 endfunction
 
 function gpt#sessions#Save() dict
-  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
+  let Wchat = gpt#utils#FromBuffer(bufnr('%'))
   if !Wchat.IsStreaming()
     let summary =  Wchat.GetSummary()
     let l:messages = Wchat.task.GetMessages()
@@ -79,13 +83,30 @@ function gpt#sessions#Save() dict
 endfunction
 
 fun! gpt#sessions#VSplit() dict
+  let Wchat = gpt#chat#create({'axis': "vertical", "size": -1 , "autofocus": v:true})
+  call self.Select(Wchat.bufnr)
 endfunc
 
 fun! gpt#sessions#Split() dict
+  let Wchat = gpt#chat#create({'axis': "horizontal", "size": -1 , "autofocus": v:true})
+  call self.Select(Wchat.bufnr)
 endfunc
 
-fun! gpt#sessions#Select() dict
-  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
+fun! gpt#sessions#Select(...) dict
+  if a:0 > 0
+    let to = a:1
+    let from = self.GetVar("from")
+  else
+    let to = v:null
+    let from = self.GetVar("from")
+  endif
+
+  if to
+    let Wchat = gpt#utils#FromBuffer(to)
+  else
+    let Wchat = from > 0 ? gpt#utils#FromBuffer(from) : gpt#chat#create({"name": "GPT Chat"})
+  endif
+
   if Wchat.Cancel()
     let l:summary = getline('.')->trim(" ", 0)->split(' ')[1:]->join(" ")
 
@@ -104,18 +125,21 @@ fun! gpt#sessions#Select() dict
       let l:content .= message["content"]
     endfor
 
-
     call Wchat.SetVar("&modifiable", v:true)
-    call deletebufline(bufname(Wchat.bufnr), 1 , '$')
+    call deletebufline(Wchat.bufnr, 1 , '$')
     call Wchat.SetSummary(l:summary)
 
     for ln in split(l:content, "\n", 1)
-      call appendbufline(bufname(Wchat.bufnr), '$', ln)
+      call appendbufline(Wchat.bufnr, '$', ln)
     endfor
     call Wchat.SetVar("&modifiable", v:false)
 
-    call self.Hide()
+    if to
+      call gpt#utils#switchwin(from)
+    endif
+
     call Wchat.Show()
+    call self.Hide()
   endif
 endfun
 
@@ -125,7 +149,7 @@ function gpt#sessions#Delete() dict
   let summaries = self.GetSummaries()
   let closeit = empty(summaries)
 
-  let Wchat = gpt#utils#FromBuffer(bufname(self.GetVar("from")))
+  let Wchat = gpt#utils#FromBuffer(self.GetVar("from"))
   " TODO: look for all gpt chat buffers
   if Wchat.GetSummary() == l:summary
     call Wchat.SetSummary(v:null)

@@ -1,13 +1,13 @@
 function gpt#widget#GenericWidget(name, ...) abort
-  let bnr = bufnr("GPT " .. a:name)
-  if (bnr >= 0)
-    throw "A Buffer named GPT " .. a:name .. " already exists"
+  if (!empty(a:name) && bufnr(a:name) >= 0)
+    throw "A Buffer named " .. a:name .. " already exists"
   endif
+
   let w = {
         \ 'size':             -1,
         \ 'maps':             {},
         \ 'axis':             "auto",
-        \ 'bufnr':            bufadd("GPT " .. a:name),
+        \ 'bufnr':            bufadd(a:name),
         \ 'autofocus':        v:true,
         \
         \ 'Map':              function('gpt#widget#Map'),
@@ -90,15 +90,26 @@ function gpt#widget#Map(mode, binding, command) dict
 endfunction
 
 function gpt#widget#Hide() dict
-  execute "hide " ..  "\"" .. bufname(self.bufnr) .. "\""
+  let cur_bnr = bufnr("%")
+
+  let winid = bufwinid(self.bufnr)
+  call win_gotoid(winid)
+
+  execute "hide "
+
+  let winid = bufwinid(cur_bnr)
+  call win_gotoid(winid)
 endfunction
 
 function gpt#widget#Show() dict
   let cur_bnr = bufnr("%")
+
+  " let the widget know who launced it
+  call self.SetVar("from", cur_bnr)
   let tabpage_buffers = tabpagebuflist()
 
   if index(tabpage_buffers, self.bufnr) == -1
-    execute self.GetAxis() .. " split " ..  bufname(self.bufnr)
+    execute self.GetAxis() .. " sbuffer " ..  self.bufnr
     call self.Resize()
     for mode in keys(self.maps)
       for binding in keys(self.maps[mode])
@@ -107,7 +118,10 @@ function gpt#widget#Show() dict
     endfor
   endif
 
-  if !self.autofocus
+  if self.autofocus
+    let winid = bufwinid(self.bufnr)
+    call win_gotoid(winid)
+  else
     let winid = bufwinid(cur_bnr)
     call win_gotoid(winid)
   endif

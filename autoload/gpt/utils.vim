@@ -1,3 +1,4 @@
+let s:__GPT__Object__ = {}
 
 fun! gpt#utils#build_header(username)
   let user = a:username . ":"
@@ -5,38 +6,6 @@ fun! gpt#utils#build_header(username)
   let txt  = txt . repeat("=", len(user)) . "\n\n"
   return txt
 endfun
-
-fun! gpt#utils#get_session_id()
-  if bufexists(gpt#utils#bufname())
-    let lognr = gpt#utils#bufnr()
-    let fl=getbufline(lognr, 2)[0]
-
-    if fl[0:len("SESSION")-1] == "SESSION"
-      let sp = split(fl)
-      return sp[1]
-    end
-  end
-  return "default"
-endfun
-
-function gpt#utils#split_win(...)
-  if a:0 > 0
-    let l:bnr = a:1
-  end
-  if winwidth(0) > winheight(0) * 2
-    execute "vsplit" bufname(l:bnr)
-  else
-    execute "split" bufname(l:bnr)
-  endif
-endfunction
-
-function gpt#utils#bufnr() abort
-  return bufnr("GPT Chat")
-endfunction
-
-function gpt#utils#bufname() abort
-  return "GPT Log"
-endfunction
 
 function gpt#utils#visual_selection() abort
   try
@@ -58,22 +27,19 @@ endfunction
 
 
 function gpt#utils#ours(bnr)
-  return getbufvar(a:bnr, "__GPT__") 
+  return getbufvar(a:bnr, "__GPT__")
 endfunction
 
-function gpt#utils#Register(name, obj) abort
-  let bufnr = bufnr(a:name)
-  if bufnr >= 0
-    call setbufvar(bufnr, "__obj__", a:obj)
-  else
-    throw "No such buffer: " .. a:name
-  endif
+function gpt#utils#Register(bnr, obj) abort
+  let s:__GPT__Object__[a:bnr] = a:obj
 endfunction
 
-function gpt#utils#FromBuffer(name) abort
-  let bufnr = bufnr(a:name)
-  if bufnr >= 0
-    return getbufvar(bufnr, "__obj__")
+function gpt#utils#FromBuffer(bnr) abort
+  let l:bnr = bufnr(a:bnr)
+  if bufnr(l:bnr) > 0
+    if s:__GPT__Object__->has_key(l:bnr)
+      return s:__GPT__Object__[l:bnr]
+    endif
   endif
   return v:null
 endfunction

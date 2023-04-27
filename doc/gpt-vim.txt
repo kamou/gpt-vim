@@ -86,10 +86,11 @@ In visual mode, the selection will be appended to the prompt.
 
 ##### Conversation Mappings             *gptvim-conversationwidget-mappings*
 
-- `<CR>`: Select a conversation summary from the list and reload it in the chat
-  widget.
+- `<CR>`: Load the conversation under the cursor.
 - `d`: Delete the selected chat session.
 - `q`: Hide the conversation widget.
+- `s`: Open the conversation under the cursor in a horizontal split.
+- `v`: Open the conversation under the cursor in a vertical split.
 
 =============================================================================
 

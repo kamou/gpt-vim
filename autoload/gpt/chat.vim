@@ -1,12 +1,15 @@
 
-function gpt#chat#create(callback, name) abort
+function gpt#chat#create(args) abort
+  " Default options
+  let l:opts = get(a:args, "opts", { "axis": "auto", "size": -1, "autofocus": exists("g:gpt_vim_autofocus") ? g:gpt_vim_autofocus : v:false })
+  let l:name = get(a:args, "name", "")
 
   let l:lang = getbufvar(bufnr('%'), "&filetype")
   let l:lang = l:lang && (l:lang != "help") ? l:lang : "lang_name"
   let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
-  let Wchat = gpt#widget#GenericWidget(a:name, l:context)
+  let Wchat = gpt#widget#GenericWidget(l:name, l:context)
   let Wchat = Wchat->extend({
-        \ "task":     gpt#task#create(a:name, l:context, {"stream": v:true}),
+        \ "task":     gpt#task#create(l:name ? l:name : string(rand(srand())), l:context, {"stream": v:true}),
         \ "callback": v:null,
         \ "lang":     v:null,
         \
@@ -31,21 +34,21 @@ function gpt#chat#create(callback, name) abort
         \ "GetLastAnswer":        function('gpt#chat#GetLastAnswer'),
         \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
         \ })
+
+  let Wchat = Wchat->extend(l:opts)
+
   let Wchat.task.config.stream = v:true
-  call Wchat.SetAutoFocus(v:false)
-  call Wchat.SetStreamingCallback(a:callback)
+  call Wchat.SetStreamingCallback(funcref('s:timer_cb', [Wchat]))
   call setbufvar(Wchat.bufnr, "&filetype", "markdown")
   call setbufvar(Wchat.bufnr, "&syntax", "markdown")
   call Wchat.SetStreamId(v:null)
-  call Wchat.SetAxis("auto")
-  call Wchat.SetSize(-1)
-  call Wchat.Map("n", "q", ":call gpt#utils#FromBuffer('" .. a:name .. "').Hide()<CR>")
-  call Wchat.Map("n", "r", ":call gpt#utils#FromBuffer('" .. a:name .. "').Reset()<CR>")
-  call Wchat.Map("n", "s", ":call gpt#utils#FromBuffer('Conversations').Save()<CR>")
-  call Wchat.Map("n", "L", ":call gpt#utils#FromBuffer('Conversations').List()<CR>")
-  call Wchat.Map("n", "c", ":call gpt#utils#FromBuffer('" .. a:name .. "').Cancel()<CR>")
+  call Wchat.Map("n", "q", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr) .. ").Hide()<CR>")
+  call Wchat.Map("n", "r", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr) .. ").Reset()<CR>")
+  call Wchat.Map("n", "s", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).Save()<CR>")
+  call Wchat.Map("n", "L", ":call gpt#utils#FromBuffer(bufnr('GPT Conversations')).List()<CR>")
+  call Wchat.Map("n", "c", ":call gpt#utils#FromBuffer(" .. string(Wchat.bufnr)  .. ").Cancel()<CR>")
   call Wchat.Prepare()
-  call gpt#utils#Register(a:name, Wchat)
+  call gpt#utils#Register(Wchat.bufnr, Wchat)
   return Wchat
 endfunction
 
@@ -158,4 +161,65 @@ function gpt#chat#Collect() dict abort
   let lines = getbufline(self.bufnr, answer_start, '$')  " get all the new lines
   return join(lines, "\n")  " join the lines with a newline character
 endfunction
+
+function s:timer_cb(Wchat, id) abort
+  call timer_pause(a:id, 1)
+
+  let chunk = a:Wchat.GetNextChunk()
+  if empty(chunk)
+    echoerr "Unexpected end of stream, aborting"
+    " Collect the answer and a stop the streaming
+    let content = a:Wchat.Collect()
+
+    " commit memory
+    let message =  { "role": "assistant", "content" : content }
+    call a:Wchat.AssistUpdate(message)
+    " TODO: implement retry before stop ?
+    call a:Wchat.StreamStop()
+    return
+  endif
+
+  let delta = chunk["delta"]
+  let index = chunk["index"]
+
+  if has_key(delta, "content")
+    let l:content = delta["content"]->split('\n', 1)
+
+    " update chat log
+    " append to last line
+    call a:Wchat.LineAppendString('$', l:content[0])
+
+    " append to buffer if multiline
+    if len(l:content) > 1
+      call a:Wchat.BufAppendLines(l:content[1:])
+    endif
+
+    " Follow the answer
+    let matching_windows = win_findbuf(a:Wchat.bufnr)
+    for win in matching_windows
+      :call win_execute(win, 'normal G$')
+    endfor
+  endif
+
+  if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
+    let content = a:Wchat.Collect()
+
+    " commit memory
+    let message =  { "role": "assistant", "content" : content }
+    call a:Wchat.AssistUpdate(message)
+
+    " done
+    if chunk["finish_reason"] == "stop"
+      call a:Wchat.StreamStop()
+      return
+    endif
+
+    " too many tokens, freeing a few tokens by memory loss. Replay will delete last
+    " memory if not enought tokens are available
+    call a:Wchat.AssistReplay()
+
+  endif
+  call timer_pause(a:id, 0)
+endfunction
+
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0

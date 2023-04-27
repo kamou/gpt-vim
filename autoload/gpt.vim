@@ -16,12 +16,18 @@ function gpt#Assist(vmode) range abort
   " Prepare func args
   let l:selection = a:vmode ? gpt#utils#visual_selection() : v:null
 
-  let Wchat = gpt#utils#FromBuffer("Chat")
+  " first check if the current window is a chat window
+  let Wchat = gpt#utils#FromBuffer('%')
   if Wchat->empty()
-    let Wchat = gpt#chat#create(funcref('s:timer_cb'), "Chat")
+    " otherwise locate the default main chat window
+    let Wchat = gpt#utils#FromBuffer(bufnr("GPT Chat"))
+    if Wchat->empty()
+      " otherwise create a new main chat window
+      let Wchat = gpt#chat#create({"name": "GPT Chat"})
+    endif
   endif
 
-  if gpt#utils#FromBuffer("Conversations")->empty()
+  if gpt#utils#FromBuffer(bufnr("GPT Conversations"))->empty()
     call gpt#sessions#create()
   endif
 
@@ -67,69 +73,9 @@ function gpt#Assist(vmode) range abort
 endfunction
 
 
-function s:timer_cb(id) abort
-  let Wchat = gpt#utils#FromBuffer("Chat")
-  call timer_pause(a:id, 1)
-
-  let chunk = Wchat.GetNextChunk()
-  if empty(chunk)
-    echoerr "Unexpected end of stream, aborting"
-    " Collect the answer and a stop the streaming
-    let content = Wchat.Collect()
-
-    " commit memory
-    let message =  { "role": "assistant", "content" : content }
-    call Wchat.AssistUpdate(message)
-    " TODO: implement retry before stop ?
-    call Wchat.StreamStop()
-    return
-  endif
-
-  let delta = chunk["delta"]
-  let index = chunk["index"]
-
-  if has_key(delta, "content")
-    let l:content = delta["content"]->split('\n', 1)
-
-    " update chat log
-    " append to last line
-    call Wchat.LineAppendString('$', l:content[0])
-
-    " append to buffer if multiline
-    if len(l:content) > 1
-      call Wchat.BufAppendLines(l:content[1:])
-    endif
-
-    " Follow the answer
-    let matching_windows = win_findbuf(Wchat.bufnr)
-    for win in matching_windows
-      :call win_execute(win, 'normal G$')
-    endfor
-  endif
-
-  if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
-    let content = Wchat.Collect()
-
-    " commit memory
-    let message =  { "role": "assistant", "content" : content }
-    call Wchat.AssistUpdate(message)
-
-    " done
-    if chunk["finish_reason"] == "stop"
-      call Wchat.StreamStop()
-      return
-    endif
-
-    " too many tokens, freeing a few tokens by memory loss. Replay will delete last
-    " memory if not enought tokens are available
-    call Wchat.AssistReplay()
-
-  endif
-  call timer_pause(a:id, 0)
-endfunction
 
 function gpt#terminate()
-  let Wchat = gpt#utils#FromBuffer("Chat")
+  let Wchat = gpt#utils#FromBuffer("GPT Chat")
   if !Wchat->empty() && !Wchat.GetStreamId()->empty()
     call timer_stop(Wchat.GetStreamId())
   endif

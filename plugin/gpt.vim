@@ -16,11 +16,11 @@ nmap <silent> gpa <Plug>(gpt-vim-assist)
 xmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal wrap | endif
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nonumber | endif
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal norelativenumber | endif
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nomodifiable | endif
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorline | endif
-autocmd BufEnter,BufLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorcolumn | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal wrap | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nonumber | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal norelativenumber | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nomodifiable | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorline | endif
+autocmd BufEnter,BufLeave,WinEnter,WinLeave * if getbufvar(bufnr('%'), "__GPT__") | setlocal nocursorcolumn | endif
 autocmd VimLeave * call gpt#terminate()
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
