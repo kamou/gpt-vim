@@ -18,7 +18,7 @@ function gpt#Assist(vmode) range abort
 
   " first check if the current window is a chat window
   let Wchat = gpt#utils#FromBuffer('%')
-  if Wchat->empty()
+  if Wchat->empty() || Wchat.type != "chat"
     " otherwise locate the default main chat window
     let Wchat = gpt#utils#FromBuffer(bufnr("GPT Chat"))
     if Wchat->empty()

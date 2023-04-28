@@ -13,6 +13,7 @@ function gpt#chat#create(args) abort
         \ "callback": v:null,
         \ "lang":     v:null,
         \ "match_id": -1,
+        \ "type":     "chat",
         \
         \ "Reset":                function('gpt#chat#Reset'),
         \ "Close":                function('gpt#chat#Close'),

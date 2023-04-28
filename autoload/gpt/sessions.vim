@@ -4,6 +4,7 @@ function gpt#sessions#create()
   let Wconv = gpt#widget#GenericWidget(l:name)
   let Wconv = Wconv->extend({
         \ "hmatch": -1,
+        \ "type":   "sessions",
         \
         \ "summarizer":           gpt#summarizer#create(),
         \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
