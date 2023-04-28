@@ -29,8 +29,9 @@ Plug 'kamou/gpt-vim'
 
 ## Available commands
 ```
-:call gpt#Assist(0)      # Launch the prompt
-:'<,'>call gpt#Assist(1) # Launch the prompt and append the current selection
+:call gpt#Assist(0)<cr>      # Launch the prompt
+:'<,'>call gpt#Assist(1)<cr> # Launch the prompt and append the current selection
+:call gpt#List()<cr>         # List saved conversations
 ```
 
 ## Default keymapping configuration
@@ -38,6 +39,7 @@ Plug 'kamou/gpt-vim'
 nmap <silent> gpa <Plug>(gpt-vim-assist)
 xmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
+nmap <silent> gpl <Plug>(gpt-vim-conversations)
 ```
 You may update it in you .vimrc file.
 

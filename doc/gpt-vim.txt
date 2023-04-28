@@ -66,6 +66,9 @@ tool, while the `conversation` widget is used for managing saved chat sessions.
                                                                 *gptvim-gpa*
 gpa                      Lauch the Chat widget.
 
+                                                                *gptvim-gpl*
+gpl                      List saved Conversations..
+
 
 You can change these mappings like this:
 
@@ -73,6 +76,7 @@ You can change these mappings like this:
 nmap <silent> gpa <Plug>(gpt-vim-assist)
 xmap <silent> gpa <Plug>(gpt-vim-assist-vis)
 vmap <silent> gpa <Plug>(gpt-vim-assist-vis)
+nmap <silent> gpl <Plug>(gpt-vim-conversations)
 ```
 In visual mode, the selection will be appended to the prompt.
 

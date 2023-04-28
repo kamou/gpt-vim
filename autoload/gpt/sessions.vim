@@ -136,10 +136,7 @@ fun! gpt#sessions#Select(...) dict
     endfor
     call Wchat.SetVar("&modifiable", v:false)
 
-    if to
-      call gpt#utils#switchwin(from)
-    endif
-
+    call gpt#utils#switchwin(from)
     call Wchat.Show()
     call self.Hide()
   endif

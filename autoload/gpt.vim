@@ -72,13 +72,28 @@ function gpt#Assist(vmode) range abort
   call Wchat.StreamStart()
 endfunction
 
-
-
 function gpt#terminate()
   let Wchat = gpt#utils#FromBuffer("GPT Chat")
   if !Wchat->empty() && !Wchat.GetStreamId()->empty()
     call timer_stop(Wchat.GetStreamId())
   endif
+endfunction
+
+function gpt#List()
+  " first check if the current window is a chat window
+  if gpt#utils#FromBuffer('%')->empty()
+    " otherwise locate the default main chat window
+    if gpt#utils#FromBuffer(bufnr("GPT Chat"))->empty()
+      " otherwise create a new main chat window
+      call gpt#chat#create({"name": "GPT Chat"})
+    endif
+  endif
+
+  let Wconv = gpt#utils#FromBuffer(bufnr("GPT Conversations"))
+  if Wconv->empty()
+    let Wconv = gpt#sessions#create()
+  endif
+  call Wconv.List()
 endfunction
 
 "" vim: ft=vim sw=2 foldmethod=marker foldlevel=0
