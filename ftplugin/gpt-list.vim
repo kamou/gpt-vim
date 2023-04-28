@@ -5,6 +5,7 @@ hi GPTCursorline term=reverse cterm=reverse
 function! RefreshCursorLine()
     let conv = gpt#utils#FromBuffer('%')
     let current_line = line('.')
+    call conv.SetPos('.', [conv.bufnr, current_line, 1])
     call clearmatches(win_getid())
     let conv.hmatch =  matchadd('GPTCursorline', '\%' .. current_line  .. 'l', 0, -1, {'window': win_getid(), 'containedin': 'ALL'})
     redraw
