@@ -17,7 +17,7 @@ function gpt#sessions#create()
         \ "GetSummaries":         function('gpt#sessions#GetSummaries'),
         \ })
   call Wconv.SetAutoFocus(v:true)
-  call Wconv.SetAxis("vertical")
+  call Wconv.SetAxis("vertical botright")
   call Wconv.SetSize(40)
   call setbufvar(Wconv.bufnr, "&filetype", "gpt-list")
   call setbufvar(Wconv.bufnr, "&syntax", "markdown")
