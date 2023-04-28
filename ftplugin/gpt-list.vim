@@ -5,7 +5,6 @@ hi GPTCursorline term=reverse cterm=reverse
 function! RefreshCursorLine()
     let conv = gpt#utils#FromBuffer('%')
     let current_line = line('.')
-    echo current_line
     if conv.hmatch > 0
       call matchdelete(conv.hmatch)
     endif
@@ -16,7 +15,7 @@ endfunction
 augroup gpt_list
   autocmd!
   autocmd BufEnter,BufLeave,WinEnter,WinLeave * if bufname('%') == 'GPT Conversations' | setlocal nowrap | endif
-  autocmd CursorMoved * if bufname('%') == 'GPT Conversations' | call RefreshCursorLine() | endif
+  autocmd BufEnter,WinEnter,CursorMoved * if bufname('%') == 'GPT Conversations' | call RefreshCursorLine() | endif
 augroup END
 
 
