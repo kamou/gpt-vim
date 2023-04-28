@@ -8,6 +8,7 @@ function gpt#sessions#create()
         \
         \ "summarizer":           gpt#summarizer#create(),
         \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
+        \ "Close":                 function('gpt#sessions#Close'),
         \ "List":                 function('gpt#sessions#List'),
         \ "Save":                 function('gpt#sessions#Save'),
         \ "Split":                function('gpt#sessions#Split'),
@@ -27,7 +28,7 @@ function gpt#sessions#create()
 
   call Wconv.Map("n", "<CR>"      , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Select()<CR>")
   call Wconv.Map("n", "<nowait> d", ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Delete()<CR>")
-  call Wconv.Map("n", "q"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Hide()<CR>")
+  call Wconv.Map("n", "q"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Close()<CR>")
   call Wconv.Map("n", "s"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").Split()<CR>")
   call Wconv.Map("n", "v"         , ":call gpt#utils#FromBuffer(" .. bufnr("GPT Conversations") .. ").VSplit()<CR>")
   call gpt#utils#Register(Wconv.bufnr, Wconv)
@@ -45,6 +46,12 @@ function gpt#sessions#UpdateList(summaries) dict
   if !empty(a:summaries)
     call self.SetLines(1, a:summaries)
   endif
+endfunction
+
+function gpt#sessions#Close() dict
+  call matchdelete(self.hmatch)
+  let self.hmatch = -1
+  call self.Hide()
 endfunction
 
 function gpt#sessions#List() dict
@@ -107,7 +114,7 @@ fun! gpt#sessions#Select(...) dict
   if to
     let Wchat = gpt#utils#FromBuffer(to)
   else
-    let Wchat = (from > 0) && gpt#utils#FromBuffer(from) ?
+    let Wchat = (from > 0) && !empty(gpt#utils#FromBuffer(from)) ?
           \ gpt#utils#FromBuffer(from) :
           \ gpt#utils#FromBuffer(bufnr("GPT Chat"))
   endif
@@ -141,7 +148,7 @@ fun! gpt#sessions#Select(...) dict
 
     call gpt#utils#switchwin(from)
     call Wchat.Show()
-    call self.Hide()
+    call self.Close()
   endif
 endfun
 
@@ -160,7 +167,7 @@ function gpt#sessions#Delete() dict
   call self.UpdateList(summaries)
 
   if closeit
-    call self.Hide()
+    call self.Close()
   endif
 endfunction
 
