@@ -109,8 +109,12 @@ function gpt#widget#Show() dict
   let tabpage_buffers = tabpagebuflist()
 
   if index(tabpage_buffers, self.bufnr) == -1
-    execute self.GetAxis() .. " sbuffer " ..  self.bufnr
-    call self.Resize()
+    if (self.size != -1)
+      execute self.GetAxis() .. " "  .. self.size .. "split "
+    else
+      execute self.GetAxis() .. " "  .. "split "
+    endif
+    execute "buffer " ..  self.bufnr
     for mode in keys(self.maps)
       for binding in keys(self.maps[mode])
         execute mode .."map <silent> <buffer> " .. binding .. " " .. self.maps[mode][binding]
