@@ -1,7 +1,22 @@
 " Extend the markdown plugin
 runtime! ftplugin/markdown.vim
+hi GPTCursorline term=reverse cterm=reverse
+
+function! RefreshCursorLine()
+    let conv = gpt#utils#FromBuffer('%')
+    let current_line = line('.')
+    echo current_line
+    if conv.hmatch > 0
+      call matchdelete(conv.hmatch)
+    endif
+    let conv.hmatch =  matchadd('GPTCursorline', '\%' .. current_line  .. 'l', 0, -1, {'window': win_getid(), 'containedin': 'ALL'})
+    redraw
+endfunction
+
 augroup gpt_list
-    autocmd BufEnter,BufLeave,WinEnter,WinLeave * if bufname('%') == 'GPT Conversations' | set nowrap | endif
+  autocmd!
+  autocmd BufEnter,BufLeave,WinEnter,WinLeave * if bufname('%') == 'GPT Conversations' | setlocal nowrap | endif
+  autocmd CursorMoved * if bufname('%') == 'GPT Conversations' | call RefreshCursorLine() | endif
 augroup END
 
 

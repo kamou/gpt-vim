@@ -3,6 +3,8 @@ function gpt#sessions#create()
   let l:name = "GPT Conversations"
   let Wconv = gpt#widget#GenericWidget(l:name)
   let Wconv = Wconv->extend({
+        \ "hmatch": -1,
+        \
         \ "summarizer":           gpt#summarizer#create(),
         \ "db":                   gpt#db#create(g:gpt#plugin_dir .. "/history.db"),
         \ "List":                 function('gpt#sessions#List'),
