@@ -104,7 +104,9 @@ fun! gpt#sessions#Select(...) dict
   if to
     let Wchat = gpt#utils#FromBuffer(to)
   else
-    let Wchat = from > 0 ? gpt#utils#FromBuffer(from) : gpt#chat#create({"name": "GPT Chat"})
+    let Wchat = (from > 0) && gpt#utils#FromBuffer(from) ?
+          \ gpt#utils#FromBuffer(from) :
+          \ gpt#utils#FromBuffer(bufnr("GPT Chat"))
   endif
 
   if Wchat.Cancel()
