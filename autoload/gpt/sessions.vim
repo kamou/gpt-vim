@@ -49,7 +49,6 @@ function gpt#sessions#UpdateList(summaries) dict
 endfunction
 
 function gpt#sessions#Close() dict
-  call matchdelete(self.hmatch)
   let self.hmatch = -1
   call self.Hide()
 endfunction
