@@ -101,7 +101,14 @@ endfunction
 
 function gpt#chat#UserSay(prompt) abort dict
   let ret = self.task.UserSay(a:prompt)
-  call self.StreamStart()
+  if has_key(ret, "rate")
+    " hack, to disallow the user to send messages while waiting for the rate limit
+    let l:timer_id = timer_start(1000, funcref('s:backoff_timer', [self, a:prompt]), {'repeat': -1})
+    call self.SetStreamId(l:timer_id)
+  else
+    call self.StreamStart()
+  endif
+
   return ret
 endfunction
 
@@ -242,6 +249,20 @@ function gpt#chat#BlockModeCancel() dict abort
   let self.match_id = -1
 endfunction
 
+function s:backoff_timer(Wchat, prompt, id) abort
+  call timer_pause(a:id, 1)
+  let l:result = a:Wchat.task.UserSay(a:prompt)
+
+  if has_key(l:result, "rate")
+    call timer_pause(a:id, 0)
+  elseif has_key(l:result, "error")
+    call timer_stop(a:id)
+    echoerr "Message faied with error " .. l:result
+  else
+    call timer_stop(a:id)
+    call a:Wchat.StreamStart()
+  endif
+endfunction
 function s:timer_cb(Wchat, id) abort
   call timer_pause(a:id, 1)
 

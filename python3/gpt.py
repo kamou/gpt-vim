@@ -143,6 +143,8 @@ def GptUserSay():
     config = get_config("self.config")
     try:
         ret = task.user_say(vim.eval("a:message"), **config)
+    except RateLimitError:
+        return {"rate": True}
     except openai.OpenAIError as e:
         return {"error": e.user_message}
 
