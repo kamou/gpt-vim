@@ -100,7 +100,9 @@ function gpt#chat#SetLang(lang) abort dict
 endfunction
 
 function gpt#chat#UserSay(prompt) abort dict
-  return self.task.UserSay(a:prompt)
+  let ret = self.task.UserSay(a:prompt)
+  call self.StreamStart()
+  return ret
 endfunction
 
 function gpt#chat#Prepare() abort dict

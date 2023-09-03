@@ -69,7 +69,6 @@ function gpt#Assist(vmode) range abort
   call Wchat.BufAppendString(l:content)
   call Wchat.Show()
 
-  call Wchat.StreamStart()
 endfunction
 
 function gpt#terminate()
