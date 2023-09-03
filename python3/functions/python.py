@@ -94,10 +94,10 @@ def execute_code(x, code, description):
             x["generated"].append((temp_code.name, description, _type))
             items = list()
             for (file, desc, _type) in x["generated"]:
-                desc = desc.replace("'", "\"")
-                items.append(f"{{filename = '{file}', text = '{desc}', type = '{_type}'}}")
+                desc = desc.replace("'", r"\'")
+                items.append(f"{{'filename': '{file}', 'text': '{desc}', 'type': '{_type}'}}")
             items = ",".join(items)
-            vim.command(":lua vim.fn.setqflist({}, 'r', { title = 'list', items={"+ items+" }})")
+            vim.command(f"call setqflist([{items}], 'r')")
 
     result = "python_execute_code: Executing Python Code:\n"
     result += "```python\n"

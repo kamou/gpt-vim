@@ -1,3 +1,4 @@
+import traceback
 import vim
 import os
 import tempfile
@@ -37,12 +38,12 @@ def evaluate_code(x, code, description):
         _type = "E" if exception_info else "I"
         x["generated"].append((temp_code.name, description, _type))
         items = list()
-        for (file, desc) in x["generated"]:
-            desc = desc.replace("'", "\"")
-            items.append(f"{{filename = '{file}', text = '{desc}'}}")
+        for (file, desc, _type) in x["generated"]:
+            desc = desc.replace("'", r"\'")
+            items.append(f"{{'filename': '{file}', 'text': '{desc}', 'type': '{_type}'}}")
+        items = ",".join(items)
 
-    items = ",".join(items)
-    vim.command(":lua vim.fn.setqflist({}, 'r', { title = 'list', items={"+ items+" }})")
+    vim.command(f"call setqflist([{items}], 'r')")
 
     vim.command(f":redir END")
 
