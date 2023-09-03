@@ -21,6 +21,9 @@ function gpt#task#create(name, context, ...) abort
         \ "GetMessages": function('gpt#task#GetMessages'),
         \ "SetMessages": function('gpt#task#SetMessages'),
         \ "GetNextChunk":function('gpt#task#GetNextChunk'),
+        \ "BuildFunctionCall":function('gpt#task#BuildFunctionCall'),
+        \ "DoCall":function('gpt#task#DoCall'),
+        \ "FunctionSay":function('gpt#task#FunctionSay'),
   \ }
   call task.Init()
   return task
@@ -69,4 +72,15 @@ function gpt#task#GetNextChunk() dict
   return v:null
 endfunction
 
+function gpt#task#BuildFunctionCall(func) dict
+  return py3eval("gpt.GptBuildFunctionCall()")
+endfunction
+
+function gpt#task#DoCall() dict
+  return py3eval("gpt.GptDoCall()")
+endfunction
+
+function gpt#task#FunctionSay() dict
+  return py3eval("gpt.GptFunctionSay()")
+endfunction
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0

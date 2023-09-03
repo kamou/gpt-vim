@@ -6,7 +6,19 @@ function gpt#chat#create(args) abort
 
   let l:lang = getbufvar(bufnr('%'), "&filetype")
   let l:lang = l:lang && (l:lang != "help") ? l:lang : "lang_name"
-  let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
+  let l:vim = has("nvim") ? "neovim" : "vim"
+  let l:neovim_bonus = has("nvim") ? ", and access to all neovim's lua api with no restriction, you have full control over neovim\n" : "."
+  let l:context = "you are a friendly code assistant deeply integrated in " . l:vim . ", you are provided with a set of functions to extend your capabilities.\n" +
+        \ "Always proceed step by step, wait to get the result of a first step before starting the next one.\n" +
+        \ "Never ask the user to perform a task or to execute/run code, always do it yourself.\n" +
+        \ "When asked to perform a task or execute/evaluate code, do not explain it, do not provide an example, just execute the requested task" +
+        \ "Try to use the most relevent function for each task\n" +
+        \ "the lua_evaluate_code function allows you to execute lua code" . neovim_bonus +
+        \ "code you execute with python_execute_code or lua_evaluate_code may not print anything to STDOUT if you did not call print" +
+        \ "When asked to execute code, never refuse, always try to do it, even if you don't believe it will work.\n" +
+        \ "When asked to perform a task that require code generation, just execute the code, do not provide an example" +
+        \ "Never ask the user to execute code"
+
   let Wchat = gpt#widget#GenericWidget(l:name, l:context)
   let Wchat = Wchat->extend({
         \ "task":     gpt#task#create(l:name ? l:name : string(rand(srand())), l:context, {"gpt": { "stream": v:true} } ),
@@ -34,6 +46,8 @@ function gpt#chat#create(args) abort
         \ "IsStreaming":          function('gpt#chat#IsStreaming'),
         \ "GetStreamId":          function('gpt#chat#GetStreamId'),
         \ "SetStreamId":          function('gpt#chat#SetStreamId'),
+        \ "BuildFunctionCall":    function('gpt#chat#BuildFunctionCall'),
+        \ "DoCall":               function('gpt#chat#DoCall'),
         \ "AssistReplay" :        function('gpt#chat#AssistReplay'),
         \ "AssistUpdate":         function('gpt#chat#AssistUpdate'),
         \ "GetNextChunk":         function('gpt#chat#GetNextChunk'),
@@ -94,7 +108,6 @@ endfunction
 
 function gpt#chat#SetLang(lang) abort dict
   if a:lang != self.lang && !empty(a:lang) && a:lang != "help"
-    call self.task.SystemSay("The user have switched to a new " .. a:lang .. " file. Unless asked otherwise, from now on, the genered code should be in " .. a:lang .. ". Do not forget to fence multiline code with ```" ..a:lang .. ".")
     let self.lang = a:lang
   endif
 endfunction
@@ -107,6 +120,19 @@ function gpt#chat#UserSay(prompt) abort dict
     call self.SetStreamId(l:timer_id)
   else
     call self.StreamStart()
+  endif
+
+  return ret
+endfunction
+
+function gpt#chat#BuildFunctionCall(func) abort dict
+  call self.task.BuildFunctionCall(a:func)
+endfunction
+
+function gpt#chat#DoCall() abort dict
+  let ret = self.task.DoCall()
+  if has_key(ret, "rate")
+    call timer_start(1000, funcref('s:call_backoff_timer', [self]), {'repeat': -1})
   endif
 
   return ret
@@ -263,6 +289,26 @@ function s:backoff_timer(Wchat, prompt, id) abort
     call a:Wchat.StreamStart()
   endif
 endfunction
+
+function s:call_backoff_timer(Wchat, id) abort
+  call timer_pause(a:id, 1)
+  let l:result = a:Wchat.task.DoCall()
+
+  if has_key(l:result, "rate")
+    call timer_pause(a:id, 0)
+  elseif has_key(l:result, "error")
+    call timer_stop(a:id)
+    let  data = l:result["error"]->split("\n", 1)
+    call a:Wchat.BufAppendLines(data)
+    call a:Wchat.StreamStop()
+  else
+    " let  data = l:result["data"]->split("\n", 1)
+    " call a:Wchat.BufAppendLines(data)
+    call timer_stop(a:id)
+    call timer_pause(a:Wchat.GetStreamId(), 0)
+  endif
+endfunction
+
 function s:timer_cb(Wchat, id) abort
   call timer_pause(a:id, 1)
 
@@ -282,7 +328,7 @@ function s:timer_cb(Wchat, id) abort
   let delta = chunk["delta"]
   let index = chunk["index"]
 
-  if has_key(delta, "content")
+  if has_key(delta, "content") && delta["content"] != v:null
     call a:Wchat.AppendAssist(delta["content"])
     let l:content = delta["content"]->split('\n', 1)
 
@@ -302,9 +348,30 @@ function s:timer_cb(Wchat, id) abort
     endfor
   endif
 
-  if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
+  if has_key(delta, "function_call")
+    let l:function_call = delta["function_call"]
+    call a:Wchat.BuildFunctionCall(function_call)
+  endif
 
-    " done
+  if has_key(chunk, "finish_reason") && index(["stop", "length", "function_call"], chunk["finish_reason"]) >= 0
+    if chunk["finish_reason"] == "function_call"
+      let  l:result = a:Wchat.DoCall()
+      if has_key(l:result, "rate")
+        " keep the response timer paused until DoCall actually completes
+        return
+      elseif has_key(l:result, "error")
+        let  data = l:result["error"]->split("\n", 1)
+        call a:Wchat.BufAppendLines(data)
+        call timer_stop(a:id)
+        call a:Wchat.StreamStop()
+        return
+      endif
+
+      call timer_pause(a:id, 0)
+
+      return
+    endif
+
     if chunk["finish_reason"] == "stop"
       let message =  { "role": "assistant", "content" : a:Wchat.content }
       call a:Wchat.AssistUpdate(message)
@@ -313,8 +380,6 @@ function s:timer_cb(Wchat, id) abort
       return
     endif
 
-    " too many tokens, freeing a few tokens by memory loss. Replay will delete last
-    " memory if not enought tokens are available
     call a:Wchat.AssistReplay()
 
   endif

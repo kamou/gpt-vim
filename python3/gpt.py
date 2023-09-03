@@ -1,12 +1,18 @@
+import traceback
 import os
 import vim
 import openai
+from openai.error import RateLimitError
 import tiktoken
 import sqlite3
 import gptdb
 import shutil
-import sys
 import json
+import functions.python as python
+import functions.search as search
+import functions.web as web
+import functions.lua as lua
+from functions.function_store import FunctionStore, GptException
 
 openai.api_key = vim.eval("g:gpt_api_key")
 
@@ -19,19 +25,36 @@ GPT_TASKS = dict()
 # - split in multiple modules
 
 
-
-
 class Assistant(object):
     MAX_TOKENS = {
         "gpt-3.5-turbo-16k": 1024*16,
         "gpt-4": 1024*8,
     }
-    def __init__(self, context=None, model="gpt-3.5-turbo-16k"):
+    def __init__(self, context=None, model="gpt-3.5-turbo-16k", memory=0):
         self.history = list()
         self.full_history = list()
         self.model = model
         self.context = context
         self.response = None
+        self.memory = memory
+        self.func = dict()
+
+        self.fs = FunctionStore()
+
+        lua.register(self.fs)
+        python.register(self.fs)
+        web.register(self.fs)
+        search.register(self.fs)
+
+    def set_current_function_name(self, name):
+        self.func["name"] = name
+        self.func["arguments"] = ""
+
+    def update_current_function_args(self, args):
+        self.func["arguments"] += args
+
+    def get_current_function(self):
+        return self.func
 
     def remaining_tokens(self, max_tokens):
         enc = tiktoken.encoding_for_model(self.model)
@@ -46,6 +69,8 @@ class Assistant(object):
             if msg["role"] == "assistant":
                 tokens += 2
             elif msg["role"] == "system":
+                tokens += 3
+            elif msg["role"] == "function":
                 tokens += 3
         tokens += 5
         return (max_tokens - tokens)
@@ -64,6 +89,16 @@ class Assistant(object):
             del self.history[0]
 
         remaining_tokens = self.remaining_tokens(int(max_tokens))
+
+        functions = self.fs.schemas()
+        enc = tiktoken.encoding_for_model(self.model)
+        func_ctx = sum([
+                len(enc.encode(json.dumps(function)))
+                for function in functions
+        ])
+
+        remaining_tokens -= func_ctx
+
         kwargs["max_tokens"] = int(remaining_tokens/n)
 
         messages = self.history
@@ -73,6 +108,7 @@ class Assistant(object):
             ] + messages
 
         self.response = openai.ChatCompletion.create(
+            functions=self.fs.schemas(),
             messages=messages,
             model=self.model,
             **kwargs
@@ -91,6 +127,14 @@ class Assistant(object):
                 "content": message
             }, **kwargs)
 
+    def function_say(self, message: str, name: str, **kwargs):
+        return self.send({
+                "role": "function",
+                "name": name,
+                "content": message
+            }, **kwargs
+        )
+
     def assistant_say(self, message: str):
         return self.send(role="assistant", content=message)
 
@@ -107,8 +151,11 @@ class Assistant(object):
         if not self.response:
             return None
 
-        try: return next(self.response)
-        except StopIteration as e: return None
+        try:
+            return next(self.response)
+        except StopIteration:
+            return None
+
 
 # seems like vim.eva() is not recursively evaluating dictionaries.
 # let's fix that here
@@ -150,6 +197,55 @@ def GptUserSay():
 
     return {} if config.get("stream", False) else ret
 
+
+def GptBuildFunctionCall():
+    name = vim.eval("self.name")
+    task = GPT_TASKS[name]
+
+    function_call = vim.eval("a:func")
+    if "name" in function_call:
+        task.set_current_function_name(function_call["name"])
+    else:
+        task.update_current_function_args(function_call["arguments"])
+
+
+privdata = { "generated": list() }
+
+
+def GptDoCall():
+    global privdata
+    name = vim.eval("self.name")
+    task = GPT_TASKS[name]
+    config = get_config("self.config")
+
+    function_call = task.get_current_function()
+    name = function_call["name"]
+    arguments = function_call["arguments"]
+    try:
+        try:
+            task.fs.check_args(name, arguments)
+            data = task.fs.call(privdata, name, function_call["arguments"])
+        except GptException as e:
+            task.function_say(str(e), name, **config)
+            return {"data": ""}
+        except Exception:
+            print(traceback.format_exc())
+            return {"error": str(traceback.format_exc())}
+
+
+        enc = tiktoken.encoding_for_model(task.model)
+        size = len(enc.encode(data))
+        if size > task.MAX_TOKENS[task.model] / 2:
+            task.function_say("Error: result too big", name, **config)
+            return {"data": ""}
+
+        task.function_say(data, name, **config)
+        return {"data": data}
+
+    except RateLimitError:
+        return {"rate": True}
+
+
 def GptSystemSay():
     name = vim.eval("self.name")
     task = GPT_TASKS[name]
@@ -158,6 +254,19 @@ def GptSystemSay():
     ret = task.system_say(vim.eval("a:message"), **config)
 
     return None if config.get("stream", False) else ret
+
+
+def GptFunctionSay():
+    name = vim.eval("self.name")
+    task = GPT_TASKS[name]
+
+    config = get_config("self.config")
+    func_name = vim.eval("a:func_name")
+    message = vim.eval("a:message")
+    ret = task.function_say(message, func_name, **config)
+
+    return None if config.get("stream", False) else ret
+
 
 def GptReset():
     task = GPT_TASKS[vim.eval("self.name")]
