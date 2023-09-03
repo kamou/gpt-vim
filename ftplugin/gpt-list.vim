@@ -13,7 +13,7 @@ endfunction
 
 augroup gpt_list
   autocmd!
-  autocmd BufEnter,BufLeave,WinEnter,WinLeave * if bufname('%') == 'GPT Conversations' | setlocal nowrap | endif
+  autocmd BufEnter,BufLeave,WinEnter,WinLeave * if bufname('%') == 'GPT Conversations' | setlocal nowrap nocursorline nocursorcolumn | endif
   autocmd BufEnter,WinEnter,CursorMoved * if bufname('%') == 'GPT Conversations' | call RefreshCursorLine() | endif
 augroup END
 
