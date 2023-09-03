@@ -3,27 +3,33 @@ from bs4 import BeautifulSoup
 import wikipedia
 
 
-def download_file(_, url):
-    print(f"Downloading file from {url}")
+def download_file(_, url, dest):
+    print(f"Downloading file {url} to {dest}")
     response = requests.get(url)
     if response.status_code == 200:
-        return response.content.decode('utf-8')
+        with open(dest, "bw") as f:
+            f.write(response.content)
+        return "Successfully to downloaded file to " + dest
     else:
         return f"Failed to download file from {url} with status code {response.status_code}"
 
 
 download_file_schema = {
     "name": "download_file",
-    "description": "Download file from provided url",
+    "description": "Download and read unicode/ascii text file from provided url",
     "parameters": {
         "type": "object",
         "properties": {
             "url": {
                 "type": "string",
                 "description": "url of the file to download",
+            },
+            "dest": {
+                "type": "string",
+                "description": "destination path to save the file to",
             }
         },
-        "required": ["url"]
+        "required": ["url", "dest"]
     }
 }
 
