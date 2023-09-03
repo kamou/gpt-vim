@@ -14,6 +14,7 @@ function gpt#chat#create(args) abort
         \ "lang":     v:null,
         \ "match_id": -1,
         \ "type":     "chat",
+        \ "content":     "",
         \
         \ "Reset":                function('gpt#chat#Reset'),
         \ "Close":                function('gpt#chat#Close'),
@@ -22,7 +23,6 @@ function gpt#chat#create(args) abort
         \ "SetLang":              function('gpt#chat#SetLang'),
         \ "UserSay":              function('gpt#chat#UserSay'),
         \ "Prepare":              function('gpt#chat#Prepare'),
-        \ "Collect":              function('gpt#chat#Collect'),
         \ "BlockMode":            function('gpt#chat#BlockMode'),
         \ "BlockModeK":           function('gpt#chat#BlockModeK'),
         \ "BlockModeJ":           function('gpt#chat#BlockModeJ'),
@@ -41,7 +41,8 @@ function gpt#chat#create(args) abort
         \ "BlockModeYank":        function('gpt#chat#BlockModeYank'),
         \ "BlockModePlay":        function('gpt#chat#BlockModePlay'),
         \ "BlockModeCancel":      function('gpt#chat#BlockModeCancel'),
-        \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback')
+        \ "SetStreamingCallback": function('gpt#chat#SetStreamingCallback'),
+        \ "AppendAssist":         function('gpt#chat#AppendAssist')
         \ })
 
   let Wchat = Wchat->extend(l:opts)
@@ -174,12 +175,6 @@ function gpt#chat#SetStreamingCallback(callback) abort dict
   let self.callback = a:callback
 endfunction
 
-function gpt#chat#Collect() dict abort
-  let answer_start = self.GetPos("'g")[1]
-  let lines = getbufline(self.bufnr, answer_start, '$')  " get all the new lines
-  return join(lines, "\n")  " join the lines with a newline character
-endfunction
-
 function! SelectLines(X, Y)
   " Move cursor to the start of the range
   execute 'normal! ' . a:X . 'G'
@@ -252,11 +247,10 @@ function s:timer_cb(Wchat, id) abort
   if empty(chunk)
     echoerr "Unexpected end of stream, aborting"
     " Collect the answer and a stop the streaming
-    let content = a:Wchat.Collect()
-
-    " commit memory
-    let message =  { "role": "assistant", "content" : content }
-    call a:Wchat.AssistUpdate(message)
+    if !empty(a:Wchat.content)
+      let message =  { "role": "assistant", "content" : a:Wchat.content }
+      call a:Wchat.AssistUpdate(message)
+    endif
     " TODO: implement retry before stop ?
     call a:Wchat.StreamStop()
     return
@@ -266,6 +260,7 @@ function s:timer_cb(Wchat, id) abort
   let index = chunk["index"]
 
   if has_key(delta, "content")
+    call a:Wchat.AppendAssist(delta["content"])
     let l:content = delta["content"]->split('\n', 1)
 
     " update chat log
@@ -285,14 +280,12 @@ function s:timer_cb(Wchat, id) abort
   endif
 
   if has_key(chunk, "finish_reason") && index(["stop", "length"], chunk["finish_reason"]) >= 0
-    let content = a:Wchat.Collect()
-
-    " commit memory
-    let message =  { "role": "assistant", "content" : content }
-    call a:Wchat.AssistUpdate(message)
 
     " done
     if chunk["finish_reason"] == "stop"
+      let message =  { "role": "assistant", "content" : a:Wchat.content }
+      call a:Wchat.AssistUpdate(message)
+      let a:Wchat.content = ""
       call a:Wchat.StreamStop()
       return
     endif
@@ -305,4 +298,7 @@ function s:timer_cb(Wchat, id) abort
   call timer_pause(a:id, 0)
 endfunction
 
+function gpt#chat#AppendAssist(content) dict abort
+  let self.content = self.content . a:content
+endfunction
 " vim: ft=vim sw=2 foldmethod=marker foldlevel=0
