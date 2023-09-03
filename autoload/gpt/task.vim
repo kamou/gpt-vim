@@ -1,6 +1,6 @@
 
 function gpt#task#create(name, context, ...) abort
-  let l:model = exists("g:gpt_vim_user_model") ? g:gpt_vim_user_model : "gpt-3.5-turbo"
+  let l:model = exists("g:gpt_vim_user_model") ? g:gpt_vim_user_model : "gpt-3.5-turbo-16k"
   let task = {
         \ "name":    a:name,
         \ "model": l:model,
