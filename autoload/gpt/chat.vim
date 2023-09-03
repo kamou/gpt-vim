@@ -9,7 +9,7 @@ function gpt#chat#create(args) abort
   let l:context = "You are a code generation assistant, Your task: generate valid commented code. Answers should be markdown formatted. Multiline code should always be properly fenced like this:\n```".. l:lang .. "\n// your code goes here\n```\nAlways provide meaningful but short explanations."
   let Wchat = gpt#widget#GenericWidget(l:name, l:context)
   let Wchat = Wchat->extend({
-        \ "task":     gpt#task#create(l:name ? l:name : string(rand(srand())), l:context, {"stream": v:true}),
+        \ "task":     gpt#task#create(l:name ? l:name : string(rand(srand())), l:context, {"gpt": { "stream": v:true} } ),
         \ "callback": v:null,
         \ "lang":     v:null,
         \ "match_id": -1,

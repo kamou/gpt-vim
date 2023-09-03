@@ -1,10 +1,14 @@
 
 function gpt#task#create(name, context, ...) abort
   let l:model = exists("g:gpt_vim_user_model") ? g:gpt_vim_user_model : "gpt-3.5-turbo-16k"
+  let l:config = a:0 > 0 ? a:1 : {}
+  let l:gptconfig = has_key(config, "gpt") ? config["gpt"] : {}
+  let l:memory = has_key(config, "memory") ? config["memory"] : 0
   let task = {
         \ "name":    a:name,
         \ "model": l:model,
-        \ "config" : a:0 > 0 ? a:1 : {},
+        \ "config" : l:gptconfig,
+        \ "memory" : l:memory,
         \ "context": a:context,
         \
         \ "Init":        function('gpt#task#Init'),
