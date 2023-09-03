@@ -80,7 +80,7 @@ def evaluate_code(x, code, description):
 
 evaluate_code_schema = {
     "name": "lua_evaluate_code",
-    "description": "evaluate the provided lua code inside neovim, this function provides access to all lua standard libraries and to neovim lua apis, the code keyword is mandatory",
+    "description": "evaluate the provided lua code",
     "parameters": {
         "type": "object",
         "properties": {
