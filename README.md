@@ -4,11 +4,14 @@ This plugin brings chat gpt to Vim and NVim
 The purpose of this pugin is to assist you for your various development tasks.
 
 ![Demo time !](./uml2rust.gif)
+![Function calling](./functions.gif)
 
 ## Current Features
 
- - Chat with GPT (currently gpt3.5-turbo) in a separate buffer. The output is in markdown.
+ - Chat with GPT (currently gpt3.5-turbo-16k) in a separate buffer. The output is in markdown.
  - GPT can recall previous messages from the current session.
+ - GPT can execute Python and Lua code and interact with the editor.
+ - GPT can search the web (google, ddg, wikipedia) and read web pages content.
  - Selected text/code is appended to the prompt.
  - GPT is aware of the language of your current buffer.
  - Multiple sessions. You can save a session and continue the conversation later if needed.
