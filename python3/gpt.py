@@ -22,7 +22,11 @@ GPT_TASKS = dict()
 
 
 class Assistant(object):
-    def __init__(self, context = None, model ="gpt-3.5-turbo"):
+    MAX_TOKENS = {
+        "gpt-3.5-turbo-16k": 1024*16,
+        "gpt-4": 1024*8,
+    }
+    def __init__(self, context=None, model="gpt-3.5-turbo-16k"):
         self.history = list()
         self.full_history = list()
         self.model = model
@@ -30,12 +34,12 @@ class Assistant(object):
         self.response = None
 
     def remaining_tokens(self, max_tokens):
-        enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        enc = tiktoken.encoding_for_model(self.model)
         messages = self.history
         tokens = 0
 
         if self.context:
-            messages = [{"role": "system", "content": self.context }] + messages
+            messages = [{"role": "system", "content": self.context}] + messages
 
         for msg in messages:
             tokens += len(enc.encode(msg["content"])) + 4
@@ -46,22 +50,27 @@ class Assistant(object):
         tokens += 5
         return (max_tokens - tokens)
 
-
     def send(self, message={}, n=1, **kwargs):
         if message:
             self.history.append(message)
             self.full_history.append(message)
 
-        max_tokens = kwargs.get("max_tokens", 4096)
 
-        while ((remaining_tokens := self.remaining_tokens(int(max_tokens))) < 1000):
+        self.history = self.history[-self.memory:]
+
+        max_tokens = kwargs.get("max_tokens", self.MAX_TOKENS.get(self.model, 4096))
+
+        while (self.remaining_tokens(int(max_tokens)) < 1000):
             del self.history[0]
 
+        remaining_tokens = self.remaining_tokens(int(max_tokens))
         kwargs["max_tokens"] = int(remaining_tokens/n)
 
         messages = self.history
         if self.context:
-            messages = [{"role": "system", "content": self.context }] + messages
+            messages = [
+                {"role": "system", "content": self.context}
+            ] + messages
 
         self.response = openai.ChatCompletion.create(
             messages=messages,
@@ -71,13 +80,19 @@ class Assistant(object):
         return self.response
 
     def user_say(self, message: str, **kwargs):
-        return self.send({"role": "user", "content": message}, **kwargs)
+        return self.send({
+                "role": "user",
+                "content": message
+            }, **kwargs)
 
     def system_say(self, message: str, **kwargs):
-        self.history.append({"role": "system", "content": message})
+        self.history.append({
+                "role": "system",
+                "content": message
+            }, **kwargs)
 
     def assistant_say(self, message: str):
-        return self.send(role = "assistant", content=message)
+        return self.send(role="assistant", content=message)
 
     # mainly used to store Assistant answers
     def update(self, message: dict):
@@ -112,10 +127,14 @@ def GptReplay():
     task = GPT_TASKS[name]
     task.send(**config)
 
+
 def GptCreateTask():
     name = vim.eval("self.name")
     model = vim.eval("self.model")
-    GPT_TASKS[name] = Assistant(model=model, context=vim.eval("self.context"))
+    memory = int(vim.eval("self.memory"))
+
+    GPT_TASKS[name] = Assistant(model=model, context=vim.eval("self.context"), memory=memory)
+
 
 def GptUserSay():
     name = vim.eval("self.name")
@@ -142,6 +161,7 @@ def GptReset():
     task = GPT_TASKS[vim.eval("self.name")]
     task.reset()
 
+
 def GptGetNextChunk():
     task = GPT_TASKS[vim.eval("self.name")]
     chunk = task.get_next_chunk()
@@ -149,15 +169,18 @@ def GptGetNextChunk():
         return chunk["choices"][0]
     return None
 
+
 def GptSetMessages():
     messages = vim.eval("a:messages")
     task = GPT_TASKS[vim.eval("self.name")]
     task.history = messages[:]
     task.full_history = messages[:]
 
+
 def GptGetMessages():
     task = GPT_TASKS[vim.eval("self.name")]
     return task.full_history
+
 
 def create_options():
     options = [
@@ -174,6 +197,7 @@ def create_options():
     buf.options["syntax"] = "markdown"
     vim.api.buf_set_lines(buf, 0, 0, True,  options)
 
+
 def check_and_update_db(path):
     db = gptdb.GPTDataBase(path)
     if os.path.isfile(path) and db.get_version() == 1:
@@ -184,13 +208,18 @@ def check_and_update_db(path):
         os.remove(path)
         for conv in conversations:
             summary = conv["summary"]
-            messages = [ { "role": message[2], "content": message[3] } for message in conv["messages"] ]
+            messages = [{
+                    "role": message[2],
+                    "content": message[3]
+                } for message in conv["messages"]
+            ]
             newdb.save(summary, messages)
         shutil.move(path + ".new", path)
         del newdb
 
+
 def get_version_number(path):
-    database_name = os.path.join(path,'history.db')
+    database_name = os.path.join(path, 'history.db')
     conn = sqlite3.connect(database_name)
     cursor = conn.cursor()
     try:
@@ -203,6 +232,7 @@ def get_version_number(path):
 
     return version_number
 
+
 def GptDBSave():
     path = vim.eval("self.path")
     summary = vim.eval("a:summary")
@@ -210,6 +240,7 @@ def GptDBSave():
 
     db = gptdb.GPTDataBase(path)
     db.save(summary, messages)
+
 
 def GptDBUpdate():
     path = vim.eval("self.path")
@@ -219,12 +250,14 @@ def GptDBUpdate():
     db = gptdb.GPTDataBase(path)
     db.update(summary, messages)
 
+
 def GptDBDelete():
     path = vim.eval("self.path")
     summary = vim.eval("a:summary")
 
     db = gptdb.GPTDataBase(path)
     db.delete(summary)
+
 
 def GptDBGet():
     path = vim.eval("self.path")
@@ -233,11 +266,13 @@ def GptDBGet():
     db = gptdb.GPTDataBase(path)
     return db.get(summary)
 
+
 def GptDBList():
     path = vim.eval("self.path")
 
     db = gptdb.GPTDataBase(path)
     return db.list()
+
 
 def GptDBGetVers():
     path = vim.eval("self.path")
@@ -245,10 +280,10 @@ def GptDBGetVers():
     db = gptdb.GPTDataBase(path)
     return db.get_version()
 
+
 def GptDBSetVers():
     path = vim.eval("self.path")
     version = vim.eval("a:version")
-
 
     db = gptdb.GPTDataBase(path)
     return db.set_version(version)
