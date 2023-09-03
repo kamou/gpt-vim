@@ -40,6 +40,11 @@ class FunctionStore:
 
     def call(self, x,  name, params):
         params = json.loads(params)
+        if name not in self.funcs:
+            for k, v  in self.funcs.items():
+                if "alias" in v and name == v["alias"]:
+                    name = k
+                    break
         return self.funcs[name]["function"](x, **params)
 
     def schemas(self):
