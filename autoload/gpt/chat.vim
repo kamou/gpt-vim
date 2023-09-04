@@ -328,12 +328,7 @@ function s:timer_cb(Wchat, id) abort
   let delta = chunk["delta"]
   let index = chunk["index"]
 
-  if has("nvim")
-    let check = v:null
-  else
-    let check = v:none
-  endif
-  if has_key(delta, "content") && delta["content"] != v:null && delta["content"] != check
+  if has_key(delta, "content") && !empty(delta["content"])
     call a:Wchat.AppendAssist(delta["content"])
     let l:content = delta["content"]->split('\n', 1)
 
