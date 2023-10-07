@@ -89,8 +89,29 @@ def execute_code(x, code, description):
         _type = 'E'
         raise e
     finally:
+
+        result = "python_execute_code: Executing Python Code:\n"
+        result += "```python\n"
+        result += code
+        result += "\n```\n"
+        if exception_info:
+            result += "\n\npython_execute_code: An exception occured during the execution of the code:"
+            result += exception_info
+        else:
+            result += "\n\npython_execute_code: Execution Finished:\n\n"
+        result += "\n\n-----------------\n\n"
+        result += "Execution Result:\n"
+        result += "-----------------\n\n"
+        result += f"STDOUT:\n{output}\n\n"
+        result += f"STDERR:\n{error}\n\n"
+        if not exception_info:
+            result += "Execution succesfully finished with no exception"
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as temp_code:
-            temp_code.write(code.encode())
+            temp_code.write(code.encode() + b"\n")
+            for line in result.split("\n"):
+                temp_code.write(f"# {line}\n".encode())
+
             x["generated"].append((temp_code.name, description, _type))
             items = list()
             for (file, desc, _type) in x["generated"]:
@@ -98,22 +119,6 @@ def execute_code(x, code, description):
                 items.append(f"{{'filename': '{file}', 'text': '{desc}', 'type': '{_type}'}}")
             items = ",".join(items)
             vim.command(f"call setqflist([{items}], 'r')")
-
-    result = "python_execute_code: Executing Python Code:\n"
-    result += "```python\n"
-    result += code
-    result += "\n```\n"
-    if exception_info:
-        result += "\n\npython_execute_code: An exception occured during the execution of the code:"
-        result += exception_info
-    else:
-        result += "\n\npython_execute_code: Execution Finished:\n\n"
-    result += "\n\n-----------------\n\n"
-    result += "Execution Result:\n"
-    result += "-----------------\n\n"
-    result += f"STDOUT:\n{output}\n\n"
-    result += f"STDERR:\n{error}\n\n"
-
 
     return result
 
