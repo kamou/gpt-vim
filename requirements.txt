@@ -1,0 +1,7 @@
+openai
+tiktoken
+requests
+googlesearch-python
+wikipedia
+duckduckgo-search
+bs4
