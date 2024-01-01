@@ -101,6 +101,10 @@ function gpt#widget#Hide() dict
   call win_gotoid(winid)
 endfunction
 
+" function gpt#widget#Show() dict
+"   lua vim.api.nvim_open_win(0, false, {relative='win', width=12, height=3, bufpos={100,10}})
+" endfunciton
+
 function gpt#widget#Show() dict
   let cur_bnr = bufnr("%")
 

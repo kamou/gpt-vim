@@ -72,7 +72,6 @@ def evaluate_code(x, code, description):
     result += f"-----------------\n\n"
     result += f"STDOUT:\n{output}\n\n"
     result += f"STDERR:\n{error}\n\n"
-    result += f"\n\nlua_evaluate_code: Execution Finished with no exception\n\n"
 
 
     return result

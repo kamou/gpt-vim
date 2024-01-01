@@ -14,7 +14,6 @@ function gpt#chat#create(args) abort
         \ "When asked to perform a task or execute/evaluate code, do not explain it, do not provide an example, just execute the requested task" +
         \ "Try to use the most relevent function for each task\n" +
         \ "the lua_evaluate_code function allows you to execute lua code" . neovim_bonus +
-        \ "code you execute with python_execute_code or lua_evaluate_code may not print anything to STDOUT if you did not call print" +
         \ "When asked to execute code, never refuse, always try to do it, even if you don't believe it will work.\n" +
         \ "When asked to perform a task that require code generation, just execute the code, do not provide an example" +
         \ "Never ask the user to execute code"
