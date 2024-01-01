@@ -2,7 +2,7 @@ import traceback
 import os
 import vim
 import openai
-from openai.error import RateLimitError
+from openai import RateLimitError
 import tiktoken
 import sqlite3
 import gptdb
@@ -10,8 +10,6 @@ import shutil
 import json
 from functions.function_store import GptException
 from assistant import Assistant
-
-openai.api_key = vim.eval("g:gpt_api_key")
 
 GPT_TASKS = dict()
 
@@ -45,8 +43,9 @@ def GptCreateTask():
     name = vim.eval("self.name")
     model = vim.eval("self.model")
     memory = int(vim.eval("self.memory"))
+    apikey = vim.eval("g:gpt_api_key")
 
-    GPT_TASKS[name] = Assistant(model=model, context=vim.eval("self.context"), memory=memory)
+    GPT_TASKS[name] = Assistant(apikey, model=model, context=vim.eval("self.context"), memory=memory)
 
 
 def GptUserSay():
@@ -143,8 +142,8 @@ def GptReset():
 def GptGetNextChunk():
     task = GPT_TASKS[vim.eval("self.name")]
     chunk = task.get_next_chunk()
-    if chunk and len(chunk.get("choices", [])):
-        return chunk["choices"][0]
+    if chunk and len(chunk.choices):
+        return chunk.choices[0].model_dump(exclude_unset=True)
     return None
 
 

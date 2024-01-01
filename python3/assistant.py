@@ -1,5 +1,6 @@
 import json
 import openai
+from openai import OpenAI
 import functions.python as python
 import functions.search as search
 import functions.web as web
@@ -14,12 +15,13 @@ class Assistant(object):
         "gpt-4": 1024*8,
     }
 
-    def __init__(self, context=None, model="gpt-3.5-turbo-16k", memory=0):
+    def __init__(self, api_key, context=None, model="gpt-3.5-turbo-16k", memory=0):
         self.history = list()
         self.full_history = list()
         self.model = model
         self.context = context
         self.response = None
+        self.client = OpenAI(api_key=api_key)
         self.memory = memory
         self.func = dict()
 
@@ -56,7 +58,7 @@ class Assistant(object):
                 tokens += 3
             elif msg["role"] == "function":
                 tokens += 3
-        tokens += 5
+        tokens += 6
         return (max_tokens - tokens)
 
     def send(self, message={}, n=1, **kwargs):
@@ -90,8 +92,7 @@ class Assistant(object):
                 {"role": "system", "content": self.context}
             ] + messages
 
-        print("caling openai.ChatCompletion.create")
-        self.response = openai.ChatCompletion.create(
+        self.response = self.client.chat.completions.create(
             functions=self.fs.schemas(),
             messages=messages,
             model=self.model,
